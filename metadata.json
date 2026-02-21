@@ -1,0 +1,7 @@
+{
+  "name": "Copy of ArControl 10:40  FINAL 16/02/2026 final",
+  "description": "A comprehensive air conditioning maintenance management system featuring QR code scanning, service history tracking, AI-powered diagnostic insights, and automated technician service requests.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
