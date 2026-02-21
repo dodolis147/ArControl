@@ -109,7 +109,8 @@ const App: React.FC = () => {
     solution: t.solution,
     technicalReport: t.technical_report,
     photos: t.photos || [],
-    documents: t.documents || []
+    documents: t.documents || [],
+    waNotified: t.wa_notified
   });
 
   // --- Fetch Data ---
@@ -402,6 +403,28 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAddPlannedMaintenance = async (unitId: string, planned: any) => {
+    try {
+      const dbPlanned = {
+        id: planned.id,
+        unit_id: unitId,
+        type: planned.type,
+        description: planned.description,
+        expected_date: planned.expectedDate
+      };
+
+      const { error } = await supabase.from('planned_maintenance').insert(dbPlanned);
+      if (error) throw error;
+
+      setUnits(prev => prev.map(u => u.id === unitId ? {
+        ...u,
+        planned: [...u.planned, planned]
+      } : u));
+    } catch (e) {
+      console.error("Erro ao adicionar manutenção planejada:", e);
+    }
+  };
+
   const handleRateMaintenance = async (unitId: string, recordId: string, rating: number) => {
     try {
       const { error } = await supabase.from('maintenance_records').update({ rating }).eq('id', recordId);
@@ -431,7 +454,8 @@ const App: React.FC = () => {
         date: ticket.date,
         status: ticket.status,
         priority: ticket.priority,
-        technician_id: ticket.technicianId
+        technician_id: ticket.technicianId,
+        wa_notified: ticket.waNotified || false
       };
       
       const { error } = await supabase.from('tickets').insert(dbTicket);
@@ -455,6 +479,7 @@ const App: React.FC = () => {
       if (data.technicalReport) dbUpdate.technical_report = data.technicalReport;
       if (data.photos) dbUpdate.photos = data.photos;
       if (data.documents) dbUpdate.documents = data.documents;
+      if (data.waNotified !== undefined) dbUpdate.wa_notified = data.waNotified;
 
       const { error } = await supabase.from('tickets').update(dbUpdate).eq('id', id);
       if (error) throw error;
@@ -551,7 +576,7 @@ const App: React.FC = () => {
                 <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 relative">
                 <Routes>
                     <Route path="/public/unit/:id" element={<UnitDetailsPage units={units} user={null} isPublic={true} onUpdateUnit={() => {}} onDeleteUnit={() => {}} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={() => {}} onRateMaintenance={handleRateMaintenance} />} />
-                    <Route path="/" element={<HomePage units={units} user={authUser!} tickets={activeTickets} users={users} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onOpenAllQR={() => setQrModalState({ isOpen: true, unit: null, all: true })} onAddTicket={handleAddTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} onAddUnit={handleAddUnit} />} />
+                    <Route path="/" element={<HomePage units={units} user={authUser!} tickets={activeTickets} users={users} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onOpenAllQR={() => setQrModalState({ isOpen: true, unit: null, all: true })} onAddTicket={handleAddTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} onAddUnit={handleAddUnit} onUpdateUnit={handleUpdateUnit} onAddPlannedMaintenance={handleAddPlannedMaintenance} />} />
                     <Route path="/unit/:id" element={<UnitDetailsPage units={units} user={authUser} onUpdateUnit={handleUpdateUnit} onDeleteUnit={handleDeleteUnit} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={handleAddMaintenance} onRateMaintenance={handleRateMaintenance} />} />
                     <Route path="/reports" element={<ReportsPage units={units} user={authUser!} />} />
                     <Route path="/users" element={authUser?.role === UserRole.ADMIN ? <UsersManagementPage users={users} currentUser={authUser} onAdd={handleAddUser} onDelete={handleDeleteUser} onUpdate={handleUpdateUser} /> : <Navigate to="/" />} />

@@ -8,6 +8,7 @@ import {
   ChevronRight, 
   Printer, 
   Bell, 
+  BellOff,
   MessageSquare,
   Plus,
   Send,
@@ -31,9 +32,10 @@ import {
   Camera,
   FileText,
   Upload,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Fan
 } from 'lucide-react';
-import { ACUnit, User, UserRole, Ticket, UnitStatus } from '../types';
+import { ACUnit, User, UserRole, Ticket, UnitStatus, ServiceType } from '../types';
 import QRScannerModal from '../components/QRScannerModal';
 
 interface HomePageProps {
@@ -47,12 +49,16 @@ interface HomePageProps {
   onUpdateTicket: (id: string, data: Partial<Ticket>) => void;
   onDeleteTicket: (id: string) => void;
   onAddUnit: (u: ACUnit) => Promise<void> | void;
+  onUpdateUnit: (id: string, data: Partial<ACUnit>) => Promise<void> | void;
+  onAddPlannedMaintenance: (unitId: string, planned: any) => Promise<void> | void;
 }
 
 const HomePage: React.FC<HomePageProps> = ({ 
-  units, user, users = [], tickets, onOpenQR, onOpenAllQR, onAddTicket, onUpdateTicket, onDeleteTicket, onAddUnit 
+  units, user, users = [], tickets, onOpenQR, onOpenAllQR, onAddTicket, onUpdateTicket, onDeleteTicket, onAddUnit, onUpdateUnit, onAddPlannedMaintenance 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('Todos');
+  const [priorityFilter, setPriorityFilter] = useState<string>('Todas');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
@@ -88,14 +94,47 @@ const HomePage: React.FC<HomePageProps> = ({
     serialNumber: ''
   });
 
+  const [maintenanceAlerts, setMaintenanceAlerts] = useState<{ unitId: string; unitName: string; date: string; daysLeft: number }[]>([]);
+
+  const [remindMaintenanceTicket, setRemindMaintenanceTicket] = useState<Ticket | null>(null);
+  const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
   const navigate = useNavigate();
-  
+
   const myUnits = useMemo(() => {
     if (user.role === UserRole.CLIENT) {
       return units.filter(u => u.clientName === user.clientName);
     }
     return units;
   }, [units, user]);
+
+  // Effect to calculate maintenance alerts
+  React.useEffect(() => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const alerts: { unitId: string; unitName: string; date: string; daysLeft: number }[] = [];
+
+    myUnits.forEach(unit => {
+      unit.planned.forEach(p => {
+        const expectedDate = new Date(p.expectedDate);
+        const diffTime = expectedDate.getTime() - today.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Alert if maintenance is in exactly 5 days or less (but not in the past)
+        if (diffDays >= 0 && diffDays <= 5) {
+          alerts.push({
+            unitId: unit.id,
+            unitName: `${unit.brand} - ${unit.location}`,
+            date: p.expectedDate,
+            daysLeft: diffDays
+          });
+        }
+      });
+    });
+
+    setMaintenanceAlerts(alerts.sort((a, b) => a.daysLeft - b.daysLeft));
+  }, [myUnits]);
 
   const avgSatisfaction = useMemo(() => {
     let allRatings: number[] = [];
@@ -106,25 +145,6 @@ const HomePage: React.FC<HomePageProps> = ({
     return (allRatings.reduce((a, b) => a + b, 0) / allRatings.length).toFixed(1);
   }, [myUnits, tickets]);
   
-  const maintenanceAlerts = useMemo(() => {
-    const alerts: { unit: ACUnit, days: number }[] = [];
-    const today = new Date();
-    today.setHours(0,0,0,0);
-
-    myUnits.forEach(unit => {
-      if (unit.planned && unit.planned.length > 0) {
-        const next = [...unit.planned].sort((a,b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime())[0];
-        const target = new Date(next.expectedDate);
-        const diffTime = target.getTime() - today.getTime();
-        const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (days <= 7) {
-          alerts.push({ unit, days });
-        }
-      }
-    });
-    return alerts.sort((a, b) => a.days - b.days);
-  }, [myUnits]);
-
   const filteredUnits = useMemo(() => 
     myUnits.filter(u => 
       u.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -209,7 +229,8 @@ const HomePage: React.FC<HomePageProps> = ({
           description: ticketDescription,
           date: ticketDate,
           status: 'Aberto',
-          priority: ticketPriority
+          priority: ticketPriority,
+          openedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
         };
         await onAddTicket(newTicket);
         setLastCreatedTicket(newTicket);
@@ -227,6 +248,11 @@ const HomePage: React.FC<HomePageProps> = ({
     const techPhone = "71988638342"; 
     const message = `*NOVO CHAMADO ABERTO - ArControl*\n\n*ID do Chamado:* ${ticket.id}\n*Equipamento:* ${ticket.unitId || 'Não Vinculado'}\n*Cliente:* ${ticket.clientName}\n*Prioridade:* ${ticket.priority}\n*Descrição:* ${ticket.description}\n*Data de Previsão:* ${ticket.date}\n\n_Por favor, verifique o painel administrativo._`;
     window.open(`https://wa.me/${techPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    
+    // Mark as notified
+    if (!ticket.waNotified) {
+      onUpdateTicket(ticket.id, { waNotified: true });
+    }
   };
 
   const handleAcceptTicket = (ticket: Ticket) => {
@@ -234,6 +260,31 @@ const HomePage: React.FC<HomePageProps> = ({
       status: 'Em Atendimento',
       technicianId: user.username
     });
+  };
+
+  const handleRemindUser = (ticket: Ticket) => {
+    setRemindMaintenanceTicket(ticket);
+    // Default to 6 months from now
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    setNextMaintenanceDate(d.toISOString().split('T')[0]);
+  };
+
+  const handleConfirmMaintenanceReminder = async () => {
+    if (remindMaintenanceTicket && remindMaintenanceTicket.unitId && nextMaintenanceDate) {
+      const unit = units.find(u => u.id === remindMaintenanceTicket.unitId);
+      if (unit) {
+        const newPlanned = {
+          id: `P-${Math.floor(Math.random() * 9000) + 1000}`,
+          type: ServiceType.PREVENTIVE,
+          description: 'Manutenção Preventiva Agendada pelo Administrador',
+          expectedDate: nextMaintenanceDate
+        };
+        await onAddPlannedMaintenance(unit.id, newPlanned);
+        alert(`Nova manutenção agendada para ${nextMaintenanceDate.split('-').reverse().join('/')}. O cliente será notificado quando faltarem 5 dias.`);
+        setRemindMaintenanceTicket(null);
+      }
+    }
   };
 
   const handleOpenTransferModal = (ticket: Ticket) => {
@@ -263,7 +314,8 @@ const HomePage: React.FC<HomePageProps> = ({
       onUpdateTicket(finishingTicket.id, {
         status: 'Concluído',
         solution: finishData.solution,
-        photos: finishData.photos
+        photos: finishData.photos,
+        finishedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       });
       setFinishingTicket(null);
       setFinishData({ solution: '', photos: [] });
@@ -323,10 +375,33 @@ const HomePage: React.FC<HomePageProps> = ({
 
   const sortedTickets = useMemo(() => {
     let filtered = tickets;
+    
+    // 1. Role-based filtering
     if (user.role === UserRole.CLIENT) {
-      filtered = tickets.filter(t => t.clientName === user.clientName);
+      filtered = filtered.filter(t => t.clientName === user.clientName);
     } else if (user.role === UserRole.TECHNICIAN) {
-      filtered = tickets.filter(t => t.status === 'Aberto' || t.technicianId === user.username);
+      filtered = filtered.filter(t => t.status === 'Aberto' || t.technicianId === user.username);
+    }
+
+    // 2. Status filter
+    if (statusFilter !== 'Todos') {
+      filtered = filtered.filter(t => t.status === statusFilter);
+    }
+
+    // 3. Priority filter
+    if (priorityFilter !== 'Todas') {
+      filtered = filtered.filter(t => t.priority === priorityFilter);
+    }
+
+    // 4. Search term filter (on tickets too)
+    if (searchTerm) {
+      const s = searchTerm.toLowerCase();
+      filtered = filtered.filter(t => 
+        t.id.toLowerCase().includes(s) || 
+        t.clientName.toLowerCase().includes(s) || 
+        t.description.toLowerCase().includes(s) ||
+        (t.unitId && t.unitId.toLowerCase().includes(s))
+      );
     }
 
     return [...filtered].sort((a, b) => {
@@ -338,7 +413,7 @@ const HomePage: React.FC<HomePageProps> = ({
       const pB = order[b.priority as keyof typeof order] || 4;
       return pA - pB;
     });
-  }, [tickets, user]);
+  }, [tickets, user, statusFilter, priorityFilter, searchTerm]);
 
   const getPriorityStyles = (priority: string, status: string) => {
     if (status === 'Concluído') return 'border-gray-100 bg-gray-50/50 opacity-60';
@@ -369,6 +444,35 @@ const HomePage: React.FC<HomePageProps> = ({
     }
   };
 
+  const getUnitStatusStyles = (status: UnitStatus) => {
+    switch (status) {
+      case UnitStatus.OPERATIONAL:
+        return 'border-green-200 bg-green-50/30 animate-status-pulse-green';
+      case UnitStatus.MAINTENANCE_REQUIRED:
+      case UnitStatus.AWAITING_PARTS:
+        return 'border-orange-200 bg-orange-50/30 animate-status-pulse-orange';
+      case UnitStatus.STOPPED:
+        return 'border-red-200 bg-red-50/30 animate-status-pulse-red';
+      case UnitStatus.EQUIPAMENTO:
+      default:
+        return 'border-blue-200 bg-blue-50/30 animate-status-pulse-blue';
+    }
+  };
+
+  const getUnitStatusBadgeStyles = (status: UnitStatus) => {
+    switch (status) {
+      case UnitStatus.OPERATIONAL:
+        return 'bg-green-100 text-green-700';
+      case UnitStatus.MAINTENANCE_REQUIRED:
+      case UnitStatus.AWAITING_PARTS:
+        return 'bg-orange-100 text-orange-700';
+      case UnitStatus.STOPPED:
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-blue-100 text-blue-700';
+    }
+  };
+
   return (
     <div className="space-y-8 pb-20 animate-in fade-in duration-500">
       
@@ -382,29 +486,124 @@ const HomePage: React.FC<HomePageProps> = ({
             Painel de Gestão • {user.role === 'ADMIN' ? 'Administrador' : user.role === 'TECHNICIAN' ? 'Técnico' : 'Cliente'}
           </p>
         </div>
-        <div className="hidden sm:block text-right">
-           <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsNotificationsOpen(true)}
+            className="relative p-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:bg-gray-50 transition-all group"
+          >
+            <Bell className={`w-6 h-6 ${maintenanceAlerts.length > 0 ? 'text-orange-500 animate-swing' : 'text-gray-400'}`} />
+            {myUnits.flatMap(u => u.planned).length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                {myUnits.flatMap(u => u.planned).length}
+              </span>
+            )}
+          </button>
+          <div className="hidden sm:block text-right">
+             <p className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          </div>
         </div>
       </header>
 
+      {/* Maintenance Alerts Section */}
+      {maintenanceAlerts.length > 0 && (
+        <section className="px-2">
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-[2.5rem] p-6 animate-maintenance-alert">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-orange-500 text-white rounded-2xl shadow-lg shadow-orange-200">
+                <Bell className="w-6 h-6 animate-bounce" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-orange-900 tracking-tight italic">Lembrete de Manutenção!</h3>
+                <p className="text-orange-700/70 text-[10px] font-black uppercase tracking-widest">Atenção aos prazos preventivos</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {maintenanceAlerts.map((alert, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-white/60 backdrop-blur-sm p-4 rounded-2xl border border-orange-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 font-black text-xs">
+                      {alert.daysLeft}d
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-gray-900">{alert.unitName}</p>
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Próxima: {alert.date.split('-').reverse().join('/')}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/unit/${alert.unitId}`)}
+                    className="p-2 bg-orange-500 text-white rounded-xl shadow-md active:scale-90 transition-all"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Search & Actions */}
-      <section className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1 relative group">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[var(--theme-primary)] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Buscar por ID, Cliente ou Marca..." 
-            className="w-full pl-14 pr-6 py-5 bg-white border-2 border-gray-100 rounded-[2rem] outline-none font-bold text-[var(--theme-text)] focus:border-[var(--theme-primary)] transition-all shadow-sm"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <section className="space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[var(--theme-primary)] transition-colors" />
+            <input 
+              type="text" 
+              placeholder="Buscar por ID, Cliente ou Marca..." 
+              className="w-full pl-14 pr-6 py-5 bg-white border-2 border-gray-100 rounded-[2rem] outline-none font-bold text-[var(--theme-text)] focus:border-[var(--theme-primary)] transition-all shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button 
+            onClick={() => setIsScannerOpen(true)}
+            className="px-8 py-5 bg-[var(--theme-primary)] text-white rounded-[2rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
+          >
+            <Scan className="w-6 h-6" /> <span className="hidden sm:inline">Escanear QR</span>
+          </button>
         </div>
-        <button 
-          onClick={() => setIsScannerOpen(true)}
-          className="px-8 py-5 bg-[var(--theme-primary)] text-white rounded-[2rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all"
-        >
-          <Scan className="w-6 h-6" /> <span className="hidden sm:inline">Escanear QR</span>
-        </button>
+
+        {/* Filters Row */}
+        <div className="flex flex-wrap gap-3 px-2">
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm">
+            <Activity className="w-4 h-4 text-gray-400" />
+            <select 
+              className="bg-transparent text-xs font-black uppercase tracking-widest outline-none text-gray-600"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="Todos">Todos os Status</option>
+              <option value="Aberto">Aberto</option>
+              <option value="Em Atendimento">Em Atendimento</option>
+              <option value="Reagendado">Reagendado</option>
+              <option value="Concluído">Concluído</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm">
+            <AlertCircle className="w-4 h-4 text-gray-400" />
+            <select 
+              className="bg-transparent text-xs font-black uppercase tracking-widest outline-none text-gray-600"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+            >
+              <option value="Todas">Todas as Prioridades</option>
+              <option value="Urgente">Urgente</option>
+              <option value="Alta">Alta</option>
+              <option value="Média">Média</option>
+              <option value="Baixa">Baixa</option>
+            </select>
+          </div>
+
+          {(statusFilter !== 'Todos' || priorityFilter !== 'Todas') && (
+            <button 
+              onClick={() => { setStatusFilter('Todos'); setPriorityFilter('Todas'); }}
+              className="text-[10px] font-black text-[var(--theme-primary)] uppercase tracking-widest hover:underline"
+            >
+              Limpar Filtros
+            </button>
+          )}
+        </div>
       </section>
 
       {/* Stats Summary */}
@@ -463,13 +662,36 @@ const HomePage: React.FC<HomePageProps> = ({
                       {ticket.status === 'Em Atendimento' ? 'EM ANDAMENTO' : (ticket.status === 'Reagendado' ? 'REAGENDADO' : ticket.priority)}
                     </span>
 
-                    {/* NEW DATE HIGHLIGHT BADGE */}
-                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-sm ${ticket.status === 'Reagendado' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-gray-800 text-white border-transparent'}`} title="Data Agendada">
-                       <CalendarClock className="w-3 h-3" />
-                       <span className="text-[9px] font-black tracking-widest">{ticket.date.split('-').reverse().join('/')}</span>
+                    {ticket.status === 'Aberto' && (
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-[var(--theme-primary)]">
+                        <Fan className="w-3 h-3" />
+                        <span className="text-[9px] font-black tracking-widest uppercase">Aguardando Técnico</span>
+                      </div>
+                    )}
+
+                    {/* NEW DATE HIGHLIGHT BADGE - LARGER AND PULSING */}
+                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border shadow-lg animate-date-pulse ${ticket.status === 'Reagendado' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-gray-900 text-white border-transparent'}`} title="Data Agendada">
+                       <CalendarClock className="w-5 h-5" />
+                       <span className="text-sm font-black tracking-widest">{ticket.date.split('-').reverse().join('/')}</span>
                     </div>
 
                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{ticket.id}</span>
+                  </div>
+
+                  {/* Ticket Times: Opening and Closing */}
+                  <div className="flex gap-4 mb-3">
+                    {ticket.openedAt && (
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Aberto: <span className="text-gray-900">{ticket.openedAt}</span></p>
+                      </div>
+                    )}
+                    {ticket.finishedAt && (
+                      <div className="flex items-center gap-1.5 text-gray-500">
+                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                        <p className="text-[10px] font-black uppercase tracking-widest">Finalizado: <span className="text-gray-900">{ticket.finishedAt}</span></p>
+                      </div>
+                    )}
                   </div>
                   
                   <h4 className="font-black text-[var(--theme-text)] text-lg leading-tight mb-3">{ticket.description}</h4>
@@ -541,40 +763,6 @@ const HomePage: React.FC<HomePageProps> = ({
                 </div>
                 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                   {/* Technician Actions */}
-                   {user.role === UserRole.TECHNICIAN && (
-                     <>
-                        {ticket.status === 'Aberto' && (
-                          <button 
-                            onClick={() => handleAcceptTicket(ticket)}
-                            className="flex-1 md:flex-none px-4 py-3 bg-orange-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
-                            title="Aceitar Chamado"
-                          >
-                            <PlayCircle className="w-5 h-5" /> <span className="text-xs font-black uppercase">Aceitar</span>
-                          </button>
-                        )}
-                        
-                        {(ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username && (
-                           <>
-                             <button 
-                               onClick={() => handleOpenFinishModal(ticket)}
-                               className="flex-1 md:flex-none px-4 py-3 bg-green-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
-                               title="Finalizar Chamado"
-                             >
-                               <CheckSquare className="w-5 h-5" /> <span className="text-xs font-black uppercase">Finalizar</span>
-                             </button>
-                             <button 
-                               onClick={() => handleOpenReschedule(ticket)}
-                               className="flex-1 md:flex-none px-4 py-3 bg-indigo-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
-                               title="Reagendar Chamado"
-                             >
-                               <CalendarClock className="w-5 h-5" />
-                             </button>
-                           </>
-                        )}
-                     </>
-                   )}
-
                    {/* Transfer Action */}
                    {(user.role === UserRole.ADMIN || (user.role === UserRole.TECHNICIAN && ticket.technicianId === user.username)) && ticket.status !== 'Concluído' && (
                        <button
@@ -586,24 +774,51 @@ const HomePage: React.FC<HomePageProps> = ({
                        </button>
                    )}
 
+                   {/* Technician Secondary Action: Reschedule */}
+                   {user.role === UserRole.TECHNICIAN && (ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username && (
+                      <button 
+                        onClick={() => handleOpenReschedule(ticket)}
+                        className="flex-1 md:flex-none p-3 bg-indigo-500 text-white rounded-xl shadow-lg active:scale-90 transition-all"
+                        title="Reagendar Chamado"
+                      >
+                        <CalendarClock className="w-5 h-5 mx-auto" />
+                      </button>
+                   )}
+
                    {/* Client Rating Action */}
                    {user.role === UserRole.CLIENT && ticket.status === 'Concluído' && !ticket.rating && (
                      <button 
                        onClick={() => { setRatingTicket(ticket); setRatingValue(0); }}
-                       className="flex-1 md:flex-none px-4 py-3 bg-yellow-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2 animate-pulse"
+                       className="flex-1 md:flex-none px-4 py-3 bg-yellow-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
                      >
                        <Star className="w-5 h-5" /> <span className="text-xs font-black uppercase">Avaliar</span>
                      </button>
                    )}
 
                    {/* General Actions */}
+                   {ticket.status === 'Concluído' && user.role === UserRole.ADMIN && (
+                     <button 
+                       onClick={() => handleRemindUser(ticket)}
+                       className="flex-1 md:flex-none p-3 bg-indigo-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2 group/remind"
+                       title="Relembrar Cliente"
+                     >
+                       <Bell className="w-5 h-5 mx-auto" />
+                       <span className="text-[10px] font-black uppercase hidden sm:inline">Relembrar</span>
+                     </button>
+                   )}
+
                    {ticket.status !== 'Concluído' && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT) && (
                      <button 
                        onClick={() => handleNotifyTechnician(ticket)}
-                       className="flex-1 md:flex-none p-3 bg-emerald-600 text-white rounded-xl shadow-lg shadow-emerald-100 active:scale-90 transition-all"
-                       title="Notificar via WhatsApp"
+                       className={`flex-1 md:flex-none p-3 rounded-xl shadow-lg active:scale-90 transition-all ${
+                         ticket.waNotified 
+                           ? 'bg-gray-200 text-gray-500 shadow-none cursor-default' 
+                           : 'bg-emerald-600 text-white shadow-emerald-100'
+                       }`}
+                       title={ticket.waNotified ? "Notificação já enviada" : "Notificar via WhatsApp"}
+                       disabled={ticket.waNotified}
                      >
-                       <Send className="w-5 h-5 mx-auto" />
+                       {ticket.waNotified ? <CheckCircle2 className="w-5 h-5 mx-auto" /> : <Send className="w-5 h-5 mx-auto" />}
                      </button>
                    )}
                    
@@ -625,6 +840,32 @@ const HomePage: React.FC<HomePageProps> = ({
                    )}
                 </div>
               </div>
+
+              {/* Quick Action Bar for Technicians */}
+              {user.role === UserRole.TECHNICIAN && (ticket.status === 'Aberto' || ((ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username)) && (
+                <div className="mt-6 pt-4 border-t border-gray-100/50 relative z-10">
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Ação Rápida do Técnico</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {ticket.status === 'Aberto' ? (
+                    <button 
+                      onClick={() => handleAcceptTicket(ticket)}
+                      className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
+                    >
+                      <PlayCircle className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
+                      <span>Aceitar Chamado Agora</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => handleOpenFinishModal(ticket)}
+                      className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
+                    >
+                      <CheckSquare className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
+                      <span>Finalizar Serviço</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             </div>
           )) : (
             <div className="text-center py-10 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
@@ -653,16 +894,22 @@ const HomePage: React.FC<HomePageProps> = ({
           {filteredUnits.length > 0 ? filteredUnits.map(unit => (
             <div 
               key={unit.id} 
-              className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-center gap-6"
+              className={`p-6 rounded-[2.5rem] border transition-all flex flex-col md:flex-row items-center gap-6 ${getUnitStatusStyles(unit.status)}`}
             >
-              <div className="w-20 h-20 bg-[var(--theme-primary-light)] rounded-2xl flex items-center justify-center flex-shrink-0">
-                <Thermometer className="w-10 h-10 text-[var(--theme-primary)]" />
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                unit.status === UnitStatus.OPERATIONAL ? 'bg-green-100' : 
+                unit.status === UnitStatus.STOPPED ? 'bg-red-100' : 'bg-orange-100'
+              }`}>
+                <Thermometer className={`w-10 h-10 ${
+                  unit.status === UnitStatus.OPERATIONAL ? 'text-green-600' : 
+                  unit.status === UnitStatus.STOPPED ? 'text-red-600' : 'text-orange-600'
+                }`} />
               </div>
               
               <div className="flex-1 text-center md:text-left">
                 <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
                   <h3 className="text-xl font-black text-[var(--theme-text)] tracking-tighter">{unit.id}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest inline-block mx-auto md:mx-0 ${unit.status === UnitStatus.OPERATIONAL ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest inline-block mx-auto md:mx-0 ${getUnitStatusBadgeStyles(unit.status)}`}>
                     {unit.status}
                   </span>
                 </div>
@@ -911,6 +1158,129 @@ const HomePage: React.FC<HomePageProps> = ({
                    <ArrowRightLeft className="w-5 h-5" /> Confirmar Transferência
                 </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Maintenance Reminder Modal */}
+      {remindMaintenanceTicket && (
+        <div className="fixed inset-0 z-[3100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in-95">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-black italic tracking-tighter text-[var(--theme-text)]">Agendar Próxima</h2>
+                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Manutenção Preventiva</p>
+              </div>
+              <button onClick={() => setRemindMaintenanceTicket(null)} className="p-2 bg-gray-50 rounded-full"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="space-y-6">
+               <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 mb-6">
+                  <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Equipamento</p>
+                  <p className="font-black text-indigo-900">{units.find(u => u.id === remindMaintenanceTicket.unitId)?.brand} - {units.find(u => u.id === remindMaintenanceTicket.unitId)?.location}</p>
+               </div>
+
+               <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Data da Próxima Manutenção</label>
+                  <input 
+                    type="date" 
+                    className="w-full px-5 py-3.5 bg-gray-50 border-2 border-transparent rounded-xl font-black outline-none focus:border-indigo-500 transition-all" 
+                    value={nextMaintenanceDate} 
+                    onChange={e => setNextMaintenanceDate(e.target.value)} 
+                  />
+               </div>
+
+               <button 
+                  onClick={handleConfirmMaintenanceReminder}
+                  className="w-full bg-indigo-600 text-white py-5 rounded-[1.8rem] font-black shadow-xl active:scale-95 transition-all text-lg mt-4 flex items-center justify-center gap-2"
+               >
+                  <CalendarClock className="w-5 h-5" /> Confirmar Agendamento
+               </button>
+               
+               <p className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest px-4">
+                  O cliente receberá um alerta animado em seu painel quando faltarem 5 dias para esta data.
+               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {isNotificationsOpen && (
+        <div className="fixed inset-0 z-[4000] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl animate-in slide-in-from-bottom-10 duration-500">
+            <div className="flex justify-between items-center mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                  <Bell className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black italic tracking-tighter text-[var(--theme-text)]">Notificações</h2>
+                  <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Próximas Manutenções</p>
+                </div>
+              </div>
+              <button onClick={() => setIsNotificationsOpen(false)} className="p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition-all"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 no-scrollbar">
+              {units.flatMap(u => u.planned.map(p => ({ unit: u, planned: p }))).length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BellOff className="w-8 h-8 text-gray-300" />
+                  </div>
+                  <p className="text-gray-400 font-bold text-sm uppercase tracking-widest">Nenhuma notificação</p>
+                </div>
+              ) : (
+                units
+                  .filter(u => user.role === UserRole.CLIENT ? u.clientName === user.clientName : true)
+                  .flatMap(u => u.planned.map(p => ({ unit: u, planned: p })))
+                  .sort((a, b) => new Date(a.planned.expectedDate).getTime() - new Date(b.planned.expectedDate).getTime())
+                  .map((item, idx) => {
+                    const days = Math.ceil((new Date(item.planned.expectedDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                    const isUrgent = days <= 5 && days >= 0;
+
+                    return (
+                      <div 
+                        key={idx} 
+                        className={`p-5 rounded-3xl border-2 transition-all ${isUrgent ? 'bg-orange-50 border-orange-200 shadow-lg shadow-orange-100' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isUrgent ? 'bg-orange-500 animate-pulse' : 'bg-indigo-400'}`}></div>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'text-orange-600' : 'text-gray-400'}`}>
+                              {isUrgent ? 'Urgente • Manutenção Próxima' : 'Agendado'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-black text-gray-400">{item.planned.expectedDate.split('-').reverse().join('/')}</span>
+                        </div>
+                        <h4 className="font-black text-gray-900 text-lg leading-tight mb-1">{item.unit.brand}</h4>
+                        <p className="text-xs font-bold text-gray-500 mb-4">{item.unit.location}</p>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isUrgent ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                              {days < 0 ? 'Atrasado' : days === 0 ? 'Hoje' : `Faltam ${days} dias`}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => { setIsNotificationsOpen(false); navigate(`/unit/${item.unit.id}`); }}
+                            className={`p-2 rounded-xl transition-all ${isUrgent ? 'bg-orange-600 text-white shadow-md' : 'bg-white text-gray-400 border border-gray-200'}`}
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            <button 
+              onClick={() => setIsNotificationsOpen(false)}
+              className="w-full mt-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs active:scale-95 transition-all shadow-xl"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}

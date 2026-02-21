@@ -95,4 +95,7 @@ export interface Ticket {
   photos?: string[]; // Photos of the service
   technicalReport?: string;
   documents?: DocumentAttachment[];
+  waNotified?: boolean;
+  openedAt?: string; // Time when ticket was created (HH:mm)
+  finishedAt?: string; // Time when ticket was completed (HH:mm)
 }

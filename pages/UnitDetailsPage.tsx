@@ -94,7 +94,7 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
     const isRated = !!currentRating;
     
     return (
-      <div className={`flex flex-col gap-2 p-4 rounded-2xl transition-all ${!isRated && interactive ? 'bg-yellow-50 border-2 border-yellow-200 animate-pulse-subtle shadow-lg' : 'bg-transparent'}`}>
+      <div className={`flex flex-col gap-2 p-4 rounded-2xl transition-all ${!isRated && interactive ? 'bg-yellow-50 border-2 border-yellow-200 shadow-lg' : 'bg-transparent'}`}>
         <div className="flex items-center gap-2">
            {!isRated && interactive && <ThumbsUp className="w-4 h-4 text-yellow-600" />}
            <p className={`text-[10px] font-black uppercase tracking-widest ${isRated ? 'text-gray-400' : 'text-yellow-700'}`}>

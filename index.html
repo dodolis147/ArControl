@@ -58,6 +58,67 @@
         border: 4px solid #ef4444;
         animation: ring-expand 1.2s infinite ease-out;
       }
+
+      /* Animação para a Data do Chamado */
+      @keyframes date-pulse {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
+        50% { transform: scale(1.05); box-shadow: 0 0 15px 5px rgba(0, 0, 0, 0.1); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.2); }
+      }
+      .animate-date-pulse {
+        animation: date-pulse 2s infinite ease-in-out;
+      }
+
+      /* Animação de Alerta de Manutenção Próxima */
+      @keyframes maintenance-bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes maintenance-glow {
+        0% { box-shadow: 0 0 5px rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.3); }
+        50% { box-shadow: 0 0 20px rgba(249, 115, 22, 0.6); border-color: rgba(249, 115, 22, 0.8); }
+        100% { box-shadow: 0 0 5px rgba(249, 115, 22, 0.2); border-color: rgba(249, 115, 22, 0.3); }
+      }
+      .animate-maintenance-alert {
+        animation: maintenance-bounce 2s infinite ease-in-out, maintenance-glow 2s infinite ease-in-out;
+      }
+
+      /* Status Pulse Animations */
+      @keyframes status-pulse-green {
+        0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); border-color: rgba(34, 197, 94, 0.5); }
+        70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); border-color: rgba(34, 197, 94, 0.2); }
+        100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); border-color: rgba(34, 197, 94, 0.5); }
+      }
+      .animate-status-pulse-green {
+        animation: status-pulse-green 2s infinite;
+      }
+
+      @keyframes status-pulse-orange {
+        0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); border-color: rgba(249, 115, 22, 0.5); }
+        70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); border-color: rgba(249, 115, 22, 0.2); }
+        100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); border-color: rgba(249, 115, 22, 0.5); }
+      }
+      .animate-status-pulse-orange {
+        animation: status-pulse-orange 2s infinite;
+      }
+
+      @keyframes status-pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); border-color: rgba(239, 68, 68, 0.5); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); border-color: rgba(239, 68, 68, 0.2); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); border-color: rgba(239, 68, 68, 0.5); }
+      }
+      .animate-status-pulse-red {
+        animation: status-pulse-red 2s infinite;
+      }
+
+      @keyframes status-pulse-blue {
+        0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); border-color: rgba(59, 130, 246, 0.5); }
+        70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); border-color: rgba(59, 130, 246, 0.2); }
+        100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); border-color: rgba(59, 130, 246, 0.5); }
+      }
+      .animate-status-pulse-blue {
+        animation: status-pulse-blue 2s infinite;
+      }
     </style>
 <script type="importmap">
 {

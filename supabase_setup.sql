@@ -102,6 +102,7 @@ create table if not exists public.tickets (
   technical_report text,
   photos jsonb default '[]'::jsonb,
   documents jsonb default '[]'::jsonb,
+  wa_notified boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
