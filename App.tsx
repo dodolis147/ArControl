@@ -89,6 +89,7 @@ const App: React.FC = () => {
     date: r.date,
     time: r.time,
     photos: r.photos || [],
+    photoDescriptions: r.photo_descriptions || [],
     rating: r.rating,
     technicalReport: r.technical_report,
     documents: r.documents || []
@@ -379,6 +380,7 @@ const App: React.FC = () => {
         date: record.date,
         time: record.time,
         photos: record.photos,
+        photo_descriptions: record.photoDescriptions,
         rating: record.rating,
         technical_report: record.technicalReport,
         documents: record.documents
@@ -399,6 +401,36 @@ const App: React.FC = () => {
 
     } catch (e) {
       console.error("Erro ao adicionar manutenção:", e);
+    }
+  };
+
+  const handleUpdateMaintenance = async (unitId: string, recordId: string, data: Partial<MaintenanceRecord>) => {
+    try {
+      const dbUpdate: any = {};
+      if (data.type) dbUpdate.type = data.type;
+      if (data.technician) dbUpdate.technician = data.technician;
+      if (data.description) dbUpdate.description = data.description;
+      if (data.date) dbUpdate.date = data.date;
+      if (data.time) dbUpdate.time = data.time;
+      if (data.photos) dbUpdate.photos = data.photos;
+      if (data.photoDescriptions) dbUpdate.photo_descriptions = data.photoDescriptions;
+      if (data.technicalReport) dbUpdate.technical_report = data.technicalReport;
+      if (data.documents) dbUpdate.documents = data.documents;
+
+      const { error } = await supabase.from('maintenance_records').update(dbUpdate).eq('id', recordId);
+      if (error) throw error;
+
+      setUnits(prev => prev.map(u => {
+        if (u.id === unitId) {
+          return {
+            ...u,
+            history: u.history.map(r => r.id === recordId ? { ...r, ...data } : r)
+          };
+        }
+        return u;
+      }));
+    } catch (e) {
+      console.error("Erro ao atualizar manutenção:", e);
     }
   };
 
@@ -572,9 +604,9 @@ const App: React.FC = () => {
 
                 <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 relative">
                 <Routes>
-                    <Route path="/public/unit/:id" element={<UnitDetailsPage units={units} user={null} isPublic={true} onUpdateUnit={() => {}} onDeleteUnit={() => {}} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={() => {}} onRateMaintenance={handleRateMaintenance} />} />
+                    <Route path="/public/unit/:id" element={<UnitDetailsPage units={units} user={null} isPublic={true} onUpdateUnit={() => {}} onDeleteUnit={() => {}} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={() => {}} onUpdateMaintenance={() => {}} onRateMaintenance={handleRateMaintenance} />} />
                     <Route path="/" element={<HomePage units={units} user={authUser!} tickets={activeTickets} users={users} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onOpenAllQR={() => setQrModalState({ isOpen: true, unit: null, all: true })} onAddTicket={handleAddTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} onAddUnit={handleAddUnit} onUpdateUnit={handleUpdateUnit} onAddPlannedMaintenance={handleAddPlannedMaintenance} />} />
-                    <Route path="/unit/:id" element={<UnitDetailsPage units={units} user={authUser} onUpdateUnit={handleUpdateUnit} onDeleteUnit={handleDeleteUnit} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={handleAddMaintenance} onRateMaintenance={handleRateMaintenance} />} />
+                    <Route path="/unit/:id" element={<UnitDetailsPage units={units} user={authUser} onUpdateUnit={handleUpdateUnit} onDeleteUnit={handleDeleteUnit} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={handleAddMaintenance} onUpdateMaintenance={handleUpdateMaintenance} onRateMaintenance={handleRateMaintenance} />} />
                     <Route path="/reports" element={<ReportsPage units={units} user={authUser!} />} />
                     <Route path="/users" element={authUser?.role === UserRole.ADMIN ? <UsersManagementPage users={users} currentUser={authUser} onAdd={handleAddUser} onDelete={handleDeleteUser} onUpdate={handleUpdateUser} /> : <Navigate to="/" />} />
                     <Route path="/register" element={authUser?.role === UserRole.ADMIN ? <RegisterPage onAdd={handleAddUnit} /> : <Navigate to="/" />} />

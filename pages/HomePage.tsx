@@ -35,10 +35,14 @@ import {
   ArrowRightLeft,
   Fan,
   LayoutList,
-  LayoutGrid
+  LayoutGrid,
+  Archive,
+  ArchiveRestore,
+  AirVent
 } from 'lucide-react';
 import { ACUnit, User, UserRole, Ticket, UnitStatus, ServiceType } from '../types';
 import QRScannerModal from '../components/QRScannerModal';
+import PhotoReportModal from '../components/PhotoReportModal';
 
 interface HomePageProps {
   units: ACUnit[];
@@ -62,6 +66,7 @@ const HomePage: React.FC<HomePageProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
   const [priorityFilter, setPriorityFilter] = useState<string>('Todas');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [ticketFlowStep, setTicketFlowStep] = useState<'selection' | 'new-unit' | 'problem' | 'success'>('selection');
@@ -74,9 +79,13 @@ const HomePage: React.FC<HomePageProps> = ({
   const [ticketPriority, setTicketPriority] = useState<'Baixa' | 'Média' | 'Alta' | 'Urgente'>('Média');
   const [ticketStatus, setTicketStatus] = useState<'Aberto' | 'Em Atendimento' | 'Concluído' | 'Reagendado'>('Aberto');
   const [ticketDate, setTicketDate] = useState(new Date().toISOString().split('T')[0]);
+  const [ticketPhotos, setTicketPhotos] = useState<string[]>([]);
+  const [ticketPhotoDescriptions, setTicketPhotoDescriptions] = useState<string[]>([]);
   
   const [ratingTicket, setRatingTicket] = useState<Ticket | null>(null);
   const [ratingValue, setRatingValue] = useState(0);
+
+  const [reportTicket, setReportTicket] = useState<Ticket | null>(null);
 
   const [deleteTicketConfirmation, setDeleteTicketConfirmation] = useState<Ticket | null>(null);
 
@@ -84,7 +93,7 @@ const HomePage: React.FC<HomePageProps> = ({
   const [rescheduleData, setRescheduleData] = useState({ date: '', reason: '' });
 
   const [finishingTicket, setFinishingTicket] = useState<Ticket | null>(null);
-  const [finishData, setFinishData] = useState<{ solution: string; photos: string[] }>({ solution: '', photos: [] });
+  const [finishData, setFinishData] = useState<{ solution: string; photos: string[]; photoDescriptions: string[] }>({ solution: '', photos: [], photoDescriptions: [] });
 
   const [transferTicket, setTransferTicket] = useState<Ticket | null>(null);
   const [selectedTransferTech, setSelectedTransferTech] = useState('');
@@ -175,6 +184,8 @@ const HomePage: React.FC<HomePageProps> = ({
     setTicketPriority('Média');
     setTicketStatus('Aberto');
     setTicketDate(new Date().toISOString().split('T')[0]);
+    setTicketPhotos([]);
+    setTicketPhotoDescriptions([]);
     setTicketFlowStep('selection');
     setSelectedUnitId(null);
     setLastCreatedTicket(null);
@@ -189,6 +200,8 @@ const HomePage: React.FC<HomePageProps> = ({
     setTicketPriority(ticket.priority);
     setTicketStatus(ticket.status);
     setTicketDate(ticket.date);
+    setTicketPhotos(ticket.photos || []);
+    setTicketPhotoDescriptions(ticket.photoDescriptions || []);
     setTicketFlowStep('problem'); 
     setIsTicketModalOpen(true);
     setIsSubmitting(false);
@@ -230,7 +243,9 @@ const HomePage: React.FC<HomePageProps> = ({
           description: ticketDescription,
           priority: ticketPriority,
           status: ticketStatus,
-          date: ticketDate
+          date: ticketDate,
+          photos: ticketPhotos,
+          photoDescriptions: ticketPhotoDescriptions
         });
         setIsTicketModalOpen(false);
       } else {
@@ -242,7 +257,9 @@ const HomePage: React.FC<HomePageProps> = ({
           date: ticketDate,
           status: 'Aberto',
           priority: ticketPriority,
-          openedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          openedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          photos: ticketPhotos,
+          photoDescriptions: ticketPhotoDescriptions
         };
         await onAddTicket(newTicket);
         setLastCreatedTicket(newTicket);
@@ -324,20 +341,25 @@ const HomePage: React.FC<HomePageProps> = ({
 
   const handleOpenFinishModal = (ticket: Ticket) => {
     setFinishingTicket(ticket);
-    setFinishData({ solution: '', photos: [] });
+    setFinishData({ solution: '', photos: [], photoDescriptions: [] });
   };
 
   const handleConfirmFinish = (e: React.FormEvent) => {
     e.preventDefault();
     if (finishingTicket && finishData.solution) {
+      // Merge photos: existing ticket photos + new finish photos
+      const existingPhotos = finishingTicket.photos || [];
+      const existingDescs = finishingTicket.photoDescriptions || [];
+      
       onUpdateTicket(finishingTicket.id, {
         status: 'Concluído',
         solution: finishData.solution,
-        photos: finishData.photos,
+        photos: [...existingPhotos, ...finishData.photos],
+        photoDescriptions: [...existingDescs, ...finishData.photoDescriptions],
         finishedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
       });
       setFinishingTicket(null);
-      setFinishData({ solution: '', photos: [] });
+      setFinishData({ solution: '', photos: [], photoDescriptions: [] });
     }
   };
 
@@ -351,7 +373,25 @@ const HomePage: React.FC<HomePageProps> = ({
       });
     });
     const base64s = await Promise.all(readers);
-    setFinishData(prev => ({ ...prev, photos: [...prev.photos, ...base64s] }));
+    setFinishData(prev => ({ 
+      ...prev, 
+      photos: [...prev.photos, ...base64s],
+      photoDescriptions: [...prev.photoDescriptions, ...base64s.map(() => '')]
+    }));
+  };
+
+  const handleTicketPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const readers = Array.from(e.target.files).map(file => {
+      return new Promise<string>(resolve => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(file as Blob);
+      });
+    });
+    const base64s = await Promise.all(readers);
+    setTicketPhotos(prev => [...prev, ...base64s]);
+    setTicketPhotoDescriptions(prev => [...prev, ...base64s.map(() => '')]);
   };
 
   const handleDeleteTicketConfirm = () => {
@@ -395,6 +435,13 @@ const HomePage: React.FC<HomePageProps> = ({
   const sortedTickets = useMemo(() => {
     let filtered = tickets;
     
+    // 0. Archive filtering
+    if (showArchived) {
+      filtered = filtered.filter(t => t.archived === true);
+    } else {
+      filtered = filtered.filter(t => t.archived !== true);
+    }
+
     // 1. Role-based filtering
     if (user.role === UserRole.CLIENT) {
       filtered = filtered.filter(t => t.clientName === user.clientName);
@@ -439,6 +486,22 @@ const HomePage: React.FC<HomePageProps> = ({
     if (status === 'Em Atendimento') return 'border-orange-300 bg-orange-50 shadow-orange-100 ring-1 ring-orange-200';
     if (status === 'Reagendado') return 'border-indigo-300 bg-indigo-50 shadow-indigo-100';
     
+    if (status === 'Aberto') {
+      // Cores bem mais fortes e pulsantes para chamados em aberto
+      switch (priority) {
+        case 'Urgente': 
+          return 'border-red-600 bg-red-100 shadow-xl shadow-red-200 animate-alert-pulsing ring-4 ring-red-500/50 border-opacity-100';
+        case 'Alta': 
+          return 'border-orange-600 bg-orange-100 shadow-xl shadow-orange-200 animate-alert-pulsing ring-4 ring-orange-500/50 border-opacity-100';
+        case 'Média': 
+          return 'border-blue-600 bg-blue-100 shadow-lg shadow-blue-200 animate-status-pulse-blue ring-4 ring-blue-500/40 border-opacity-100';
+        case 'Baixa': 
+          return 'border-emerald-600 bg-emerald-100 shadow-lg shadow-emerald-200 animate-status-pulse-green ring-4 ring-emerald-500/40 border-opacity-100';
+        default: 
+          return 'border-gray-400 bg-gray-100 animate-pulse';
+      }
+    }
+
     let baseStyles = '';
     switch (priority) {
       case 'Urgente': baseStyles = 'border-red-600 bg-red-50 shadow-red-200'; break;
@@ -448,27 +511,23 @@ const HomePage: React.FC<HomePageProps> = ({
       default: baseStyles = 'border-gray-100 bg-white shadow-gray-100'; break;
     }
 
-    if (status === 'Aberto') {
-      // Add pulsing animation and stronger border for open tickets
-      const pulseClass = priority === 'Urgente' || priority === 'Alta' ? 'animate-alert-pulsing' : 'animate-status-pulse-blue';
-      return `${baseStyles} ${pulseClass} ring-2 ring-offset-2 ${priority === 'Urgente' ? 'ring-red-500' : 'ring-orange-400'} border-opacity-100`;
-    }
-
     return baseStyles;
   };
 
   const getPriorityBadgeStyles = (priority: string, status: string) => {
-    if (status === 'Concluído') return 'bg-gray-400 text-white';
-    if (status === 'Em Atendimento') return 'bg-orange-500 text-white';
-    if (status === 'Reagendado') return 'bg-indigo-500 text-white';
-    switch (priority) {
-      case 'Urgente': return 'bg-red-600 text-white';
-      case 'Alta': return 'bg-orange-500 text-white';
-      // Dynamic primary color for Media priority
-      case 'Média': return 'bg-[var(--theme-primary)] text-white';
-      case 'Baixa': return 'bg-emerald-500 text-white';
-      default: return 'bg-gray-400 text-white';
+    if (status === 'Concluído') return 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 px-4 py-1.5 rounded-xl';
+    if (status === 'Em Atendimento') return 'bg-orange-600 text-white shadow-lg shadow-orange-100 px-4 py-1.5 rounded-xl animate-pulse';
+    if (status === 'Reagendado') return 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 px-4 py-1.5 rounded-xl';
+    if (status === 'Aberto') {
+      switch (priority) {
+        case 'Urgente': return 'bg-red-600 text-white shadow-lg shadow-red-100 px-4 py-1.5 rounded-xl';
+        case 'Alta': return 'bg-orange-500 text-white shadow-lg shadow-orange-100 px-4 py-1.5 rounded-xl';
+        case 'Média': return 'bg-[var(--theme-primary)] text-white shadow-lg shadow-blue-100 px-4 py-1.5 rounded-xl';
+        case 'Baixa': return 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 px-4 py-1.5 rounded-xl';
+        default: return 'bg-gray-400 text-white px-4 py-1.5 rounded-xl';
+      }
     }
+    return 'bg-gray-400 text-white px-4 py-1.5 rounded-xl';
   };
 
   const getUnitStatusStyles = (status: UnitStatus) => {
@@ -588,10 +647,30 @@ const HomePage: React.FC<HomePageProps> = ({
           >
             <Scan className="w-6 h-6" /> <span className="hidden sm:inline">Escanear QR</span>
           </button>
+          
+          {user.role === UserRole.ADMIN && (
+            <button 
+              onClick={() => setShowArchived(!showArchived)}
+              className={`px-8 py-5 rounded-[2rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all ${
+                showArchived 
+                  ? 'bg-gray-800 text-white' 
+                  : 'bg-white text-gray-600 border border-gray-100'
+              }`}
+            >
+              <Archive className="w-6 h-6" /> 
+              <span className="hidden sm:inline">{showArchived ? 'Ver Ativos' : 'Ver Arquivados'}</span>
+            </button>
+          )}
         </div>
 
         {/* Filters Row */}
-        <div className="flex flex-wrap gap-3 px-2">
+        <div className="flex flex-wrap items-center gap-3 px-2">
+          {showArchived && (
+            <div className="bg-gray-800 text-white px-4 py-2 rounded-2xl flex items-center gap-2 animate-pulse">
+              <Archive className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Modo Arquivo Ativado</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl border border-gray-100 shadow-sm">
             <Activity className="w-4 h-4 text-gray-400" />
             <select 
@@ -703,18 +782,39 @@ const HomePage: React.FC<HomePageProps> = ({
                   <div className="space-y-1 flex-1">
                     
                     {/* MODIFIED HEADER: Status + Date Highlight */}
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getPriorityBadgeStyles(ticket.priority, ticket.status)}`}>
-                        {ticket.status === 'Em Atendimento' ? 'EM ANDAMENTO' : (ticket.status === 'Reagendado' ? 'REAGENDADO' : ticket.priority)}
-                      </span>
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                      <div className={`p-3 rounded-2xl ${
+                        ticket.status === 'Concluído' ? 'bg-gray-100 text-gray-400' : 
+                        ticket.status === 'Em Atendimento' ? 'bg-orange-100 text-orange-600' : 
+                        ticket.status === 'Aberto' ? (ticket.priority === 'Urgente' ? 'bg-red-600 text-white shadow-xl shadow-red-200' : 'bg-red-500 text-white shadow-xl shadow-red-100') :
+                        'bg-blue-100 text-blue-600'
+                      }`}>
+                        <AirVent className={`w-6 h-6 ${ticket.status === 'Em Atendimento' ? 'animate-spin-slow' : ''}`} />
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${
+                          ticket.status === 'Concluído' ? 'text-gray-400' : 
+                          ticket.status === 'Em Atendimento' ? 'text-orange-600' : 
+                          ticket.status === 'Aberto' ? 'text-red-600' : 'text-indigo-600'
+                        }`}>
+                          {ticket.status === 'Aberto' ? `Chamado ${ticket.priority}` : ticket.status.toUpperCase()}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${getPriorityBadgeStyles(ticket.priority, ticket.status)}`}>
+                          {ticket.status === 'Aberto' && <AlertCircle className="w-3 h-3 animate-pulse" />}
+                          {ticket.status === 'Em Atendimento' ? 'EM ATENDIMENTO' : (ticket.status === 'Reagendado' ? 'REAGENDADO' : (ticket.status === 'Concluído' ? 'CONCLUÍDO' : ticket.priority))}
+                        </span>
+                      </div>
 
                       {ticket.status === 'Aberto' && (
-                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-[var(--theme-primary)]">
-                          <Fan className="w-3 h-3" />
-                          <span className="text-[9px] font-black tracking-widest uppercase">Aguardando Técnico</span>
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border-2 border-red-500 shadow-md text-red-600 animate-bounce ml-auto">
+                          <AlertCircle className="w-3 h-3" />
+                          <span className="text-[9px] font-black tracking-widest uppercase">Ação Necessária</span>
                         </div>
                       )}
+                    </div>
 
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                       {/* NEW DATE HIGHLIGHT BADGE - LARGER AND PULSING */}
                       <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border shadow-lg animate-date-pulse ${ticket.status === 'Reagendado' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-gray-900 text-white border-transparent'}`} title="Data Agendada">
                          <CalendarClock className="w-5 h-5" />
@@ -854,8 +954,41 @@ const HomePage: React.FC<HomePageProps> = ({
                         </button>
                      )}
 
-                     {/* Client Rating Action */}
-                     {user.role === UserRole.CLIENT && ticket.status === 'Concluído' && !ticket.rating && (
+                      {/* Photographic Report Action */}
+                      {ticket.status === 'Concluído' && (
+                        <button 
+                          onClick={() => setReportTicket(ticket)}
+                          className="flex-1 md:flex-none p-3 bg-indigo-100 text-indigo-600 rounded-xl shadow-sm hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-2"
+                          title="Relatório Fotográfico"
+                        >
+                          <Camera className="w-5 h-5 mx-auto" />
+                          <span className="text-[10px] font-black uppercase hidden sm:inline">Relatório</span>
+                        </button>
+                      )}
+
+                      {/* Archive/Restore Action (Admin Only) */}
+                      {user.role === UserRole.ADMIN && (
+                        ticket.status === 'Concluído' && !ticket.archived ? (
+                          <button 
+                            onClick={() => onUpdateTicket(ticket.id, { archived: true })}
+                            className="flex-1 md:flex-none p-3 bg-gray-100 text-gray-600 rounded-xl shadow-sm hover:bg-gray-200 transition-all"
+                            title="Arquivar Chamado"
+                          >
+                            <Archive className="w-5 h-5 mx-auto" />
+                          </button>
+                        ) : ticket.archived ? (
+                          <button 
+                            onClick={() => onUpdateTicket(ticket.id, { archived: false })}
+                            className="flex-1 md:flex-none p-3 bg-emerald-100 text-emerald-600 rounded-xl shadow-sm hover:bg-emerald-200 transition-all"
+                            title="Desarquivar / Reabrir"
+                          >
+                            <ArchiveRestore className="w-5 h-5 mx-auto" />
+                          </button>
+                        ) : null
+                      )}
+
+                      {/* Client Rating Action */}
+                      {user.role === UserRole.CLIENT && ticket.status === 'Concluído' && !ticket.rating && (
                        <button 
                          onClick={() => { setRatingTicket(ticket); setRatingValue(0); }}
                          className="flex-1 md:flex-none px-4 py-3 bg-yellow-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
@@ -945,11 +1078,12 @@ const HomePage: React.FC<HomePageProps> = ({
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   ticket.status === 'Concluído' ? 'bg-gray-100 text-gray-400' : 
                   ticket.status === 'Em Atendimento' ? 'bg-orange-100 text-orange-600' : 
+                  ticket.status === 'Aberto' ? (ticket.priority === 'Urgente' ? 'bg-red-600 text-white shadow-xl shadow-red-200' : 'bg-red-500 text-white animate-bounce') :
                   ticket.priority === 'Urgente' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
                 }`}>
                   {ticket.status === 'Concluído' ? <CheckCircle2 className="w-6 h-6" /> : 
-                   ticket.status === 'Em Atendimento' ? <Activity className="w-6 h-6 animate-pulse" /> : 
-                   <Bell className="w-6 h-6" />}
+                   ticket.status === 'Em Atendimento' ? <AirVent className="w-6 h-6 animate-spin-slow" /> : 
+                   ticket.status === 'Aberto' ? <AirVent className="w-6 h-6" /> : <AirVent className="w-6 h-6" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -1147,6 +1281,35 @@ const HomePage: React.FC<HomePageProps> = ({
                      onChange={e => setTicketDescription(e.target.value)}
                      required
                    />
+                 </div>
+
+                 <div className="space-y-3">
+                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fotos (Opcional)</label>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     {ticketPhotos.map((p, i) => (
+                       <div key={i} className="space-y-2">
+                         <img src={p} className="w-full aspect-video rounded-xl object-cover border border-gray-200" />
+                         <input 
+                           type="text" 
+                           placeholder="Descrição da foto..." 
+                           className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[10px] font-medium outline-none focus:border-[var(--theme-primary)]"
+                           value={ticketPhotoDescriptions[i] || ''}
+                           onChange={(e) => {
+                             const newDescs = [...ticketPhotoDescriptions];
+                             newDescs[i] = e.target.value;
+                             setTicketPhotoDescriptions(newDescs);
+                           }}
+                         />
+                       </div>
+                     ))}
+                     {ticketPhotos.length < 4 && (
+                       <label className="aspect-video rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-[var(--theme-primary-light)] hover:border-[var(--theme-primary)] transition-all text-gray-400 hover:text-[var(--theme-primary)]">
+                         <Camera className="w-6 h-6 mb-1" />
+                         <span className="text-[8px] font-black uppercase">Add Foto</span>
+                         <input type="file" multiple accept="image/*" className="hidden" onChange={handleTicketPhotoUpload} />
+                       </label>
+                     )}
+                   </div>
                  </div>
 
                  <div className="grid grid-cols-2 gap-4">
@@ -1423,12 +1586,25 @@ const HomePage: React.FC<HomePageProps> = ({
 
                <div className="space-y-3">
                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Fotos do Serviço</label>
-                 <div className="grid grid-cols-4 gap-2">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {finishData.photos.map((p, i) => (
-                       <img key={i} src={p} className="w-full aspect-square rounded-xl object-cover border border-gray-200" />
+                       <div key={i} className="space-y-2">
+                          <img src={p} className="w-full aspect-video rounded-xl object-cover border border-gray-200" />
+                          <input 
+                            type="text" 
+                            placeholder="Descrição da foto..." 
+                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[10px] font-medium outline-none focus:border-green-500"
+                            value={finishData.photoDescriptions[i] || ''}
+                            onChange={(e) => {
+                              const newDescs = [...finishData.photoDescriptions];
+                              newDescs[i] = e.target.value;
+                              setFinishData({ ...finishData, photoDescriptions: newDescs });
+                            }}
+                          />
+                       </div>
                     ))}
-                    {finishData.photos.length < 4 && (
-                       <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-green-50 hover:border-green-300 transition-all text-gray-400 hover:text-green-600">
+                    {finishData.photos.length < 8 && (
+                       <label className="aspect-video rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-green-50 hover:border-green-300 transition-all text-gray-400 hover:text-green-600">
                           <Camera className="w-6 h-6 mb-1" />
                           <span className="text-[8px] font-black uppercase">Add Foto</span>
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleFinishPhotoUpload} />
@@ -1556,6 +1732,14 @@ const HomePage: React.FC<HomePageProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {reportTicket && (
+        <PhotoReportModal 
+          data={reportTicket} 
+          unit={units.find(u => u.id === reportTicket.unitId)} 
+          onClose={() => setReportTicket(null)} 
+        />
       )}
 
       {isScannerOpen && <QRScannerModal isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} />}

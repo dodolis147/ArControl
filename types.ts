@@ -50,6 +50,7 @@ export interface MaintenanceRecord {
   date: string;
   time?: string;
   photos?: string[];
+  photoDescriptions?: string[];
   rating?: number; // 1 to 5 stars
   technicalReport?: string;
   documents?: DocumentAttachment[];
@@ -93,9 +94,11 @@ export interface Ticket {
   rescheduleReason?: string; // Justification for rescheduling
   solution?: string; // Description of the service performed
   photos?: string[]; // Photos of the service
+  photoDescriptions?: string[]; // Descriptions for each photo
   technicalReport?: string;
   documents?: DocumentAttachment[];
   waNotified?: boolean;
   openedAt?: string; // Time when ticket was created (HH:mm)
   finishedAt?: string; // Time when ticket was completed (HH:mm)
+  archived?: boolean;
 }

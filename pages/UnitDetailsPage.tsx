@@ -25,10 +25,12 @@ import {
   Star,
   User as UserIconComponent,
   ThumbsUp,
-  FileText
+  FileText,
+  Camera
 } from 'lucide-react';
 import { ACUnit, User, UserRole, MaintenanceRecord, ServiceType, UnitStatus } from '../types';
 import { getMaintenanceAdvice } from '../services/geminiService';
+import PhotoReportModal from '../components/PhotoReportModal';
 
 interface UnitDetailsPageProps {
   units: ACUnit[];
@@ -37,12 +39,13 @@ interface UnitDetailsPageProps {
   onDeleteUnit: (id: string) => void;
   onOpenQR: (u: ACUnit) => void;
   onAddMaintenance: (id: string, r: MaintenanceRecord) => void;
+  onUpdateMaintenance: (unitId: string, recordId: string, data: Partial<MaintenanceRecord>) => void;
   onRateMaintenance: (unitId: string, recordId: string, rating: number) => void;
   isPublic?: boolean;
 }
 
 const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({ 
-  units, user, onUpdateUnit, onDeleteUnit, onOpenQR, onAddMaintenance, onRateMaintenance, isPublic = false 
+  units, user, onUpdateUnit, onDeleteUnit, onOpenQR, onAddMaintenance, onUpdateMaintenance, onRateMaintenance, isPublic = false 
 }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -56,6 +59,8 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
   const [copied, setCopied] = useState(false);
   const [isConfirmDelete, setIsConfirmDelete] = useState(false);
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceRecord | null>(null);
+  const [reportRecord, setReportRecord] = useState<MaintenanceRecord | null>(null);
 
   useEffect(() => { 
     if (unit) setEditForm(unit); 
@@ -125,40 +130,40 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
   };
 
   return (
-    <div className="pb-24 animate-in fade-in duration-500">
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center">
+    <div className="pb-24 animate-in fade-in duration-500 px-2 sm:px-0">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center w-full sm:w-auto">
           {!isPublic && (
-            <button onClick={() => navigate('/')} className="p-3 bg-white shadow-sm border border-gray-100 rounded-2xl mr-4 hover:bg-gray-50 transition-all active:scale-95">
-              <ChevronLeft className="w-6 h-6" />
+            <button onClick={() => navigate('/')} className="p-2.5 sm:p-3 bg-white shadow-sm border border-gray-100 rounded-xl sm:rounded-2xl mr-3 sm:mr-4 hover:bg-gray-50 transition-all active:scale-95">
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-black italic tracking-tighter leading-tight">Ficha do Equipamento</h1>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Controle de Climatização</p>
+            <h1 className="text-xl sm:text-2xl font-black italic tracking-tighter leading-tight">Ficha do Equipamento</h1>
+            <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest">Controle de Climatização</p>
           </div>
         </div>
         {/* Permission Check: Allow ADMIN OR TECHNICIAN to access these controls */}
         {!isPublic && (user?.role === UserRole.ADMIN || user?.role === UserRole.TECHNICIAN) && !isEditing && (
-          <div className="flex gap-2">
-            <button onClick={() => setIsEditing(true)} className="p-3.5 bg-yellow-500 text-white rounded-2xl shadow-lg active:scale-95 transition-all">
-              <Pencil className="w-5 h-5" />
+          <div className="flex gap-2 w-full sm:w-auto justify-end overflow-x-auto no-scrollbar pb-1">
+            <button onClick={() => setIsEditing(true)} className="p-3 sm:p-3.5 bg-yellow-500 text-white rounded-xl sm:rounded-2xl shadow-lg active:scale-95 transition-all flex-shrink-0">
+              <Pencil className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button onClick={() => setIsConfirmDelete(true)} className="p-3.5 bg-red-600 text-white rounded-2xl shadow-lg active:scale-95 transition-all">
-              <Trash2 className="w-5 h-5" />
+            <button onClick={() => setIsConfirmDelete(true)} className="p-3 sm:p-3.5 bg-red-600 text-white rounded-xl sm:rounded-2xl shadow-lg active:scale-95 transition-all flex-shrink-0">
+              <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-            <button onClick={() => setIsMaintenanceModalOpen(true)} className="p-3.5 bg-green-600 text-white rounded-2xl shadow-lg active:scale-95 transition-all">
-              <PlusCircle className="w-5 h-5" />
+            <button onClick={() => setIsMaintenanceModalOpen(true)} className="p-3 sm:p-3.5 bg-green-600 text-white rounded-xl sm:rounded-2xl shadow-lg active:scale-95 transition-all flex-shrink-0">
+              <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             {/* Alterado bg-blue-600 para bg-purple-700 */}
-            <button onClick={() => onOpenQR(unit)} className="p-3.5 bg-purple-700 text-white rounded-2xl shadow-lg active:scale-95 transition-all">
-              <Printer className="w-5 h-5" />
+            <button onClick={() => onOpenQR(unit)} className="p-3 sm:p-3.5 bg-purple-700 text-white rounded-xl sm:rounded-2xl shadow-lg active:scale-95 transition-all flex-shrink-0">
+              <Printer className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         )}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-xl border border-gray-50 p-8 mb-8 space-y-8">
+      <div className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-xl border border-gray-50 p-5 sm:p-8 mb-8 space-y-6 sm:space-y-8">
         {isEditing ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -192,16 +197,16 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-start">
-              <div className="space-y-2">
-                <div className="flex gap-2">
+            <div className="flex justify-between items-start gap-2">
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex flex-wrap gap-2">
                    {/* Alterado bg-blue-50 text-blue-600 para bg-purple-50 text-purple-700 */}
-                   <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-[10px] font-black uppercase tracking-widest">{unit.clientName}</span>
+                   <span className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-widest truncate max-w-full">{unit.clientName}</span>
                 </div>
-                <h2 className="text-4xl font-black text-gray-900 tracking-tighter leading-none">{unit.id}</h2>
-                <p className="text-sm text-gray-400 font-black uppercase tracking-widest">{unit.brand} • {unit.btu} BTU</p>
+                <h2 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tighter leading-none break-all">{unit.id}</h2>
+                <p className="text-[11px] sm:text-sm text-gray-400 font-black uppercase tracking-widest">{unit.brand} • {unit.btu} BTU</p>
               </div>
-              <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${unit.status === UnitStatus.OPERATIONAL ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
+              <span className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-widest flex-shrink-0 ${unit.status === UnitStatus.OPERATIONAL ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}`}>
                 {unit.status}
               </span>
             </div>
@@ -221,45 +226,45 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-y-6 pt-4 border-t border-gray-50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 sm:gap-y-6 pt-4 border-t border-gray-50">
                   <div className="space-y-1">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Setor / Bloco</p>
-                    <p className="text-gray-900 font-bold leading-tight">{unit.department}</p>
+                    <p className="text-gray-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Setor / Bloco</p>
+                    <p className="text-gray-900 font-bold leading-tight text-sm sm:text-base">{unit.department}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Nº de Série</p>
-                    <p className="text-gray-900 font-bold leading-tight font-mono">{unit.serialNumber}</p>
+                    <p className="text-gray-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Nº de Série</p>
+                    <p className="text-gray-900 font-bold leading-tight font-mono text-sm sm:text-base break-all">{unit.serialNumber}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Localização</p>
-                    <p className="text-gray-900 font-bold leading-tight">{unit.location}</p>
+                    <p className="text-gray-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Localização</p>
+                    <p className="text-gray-900 font-bold leading-tight text-sm sm:text-base">{unit.location}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Data Instalação</p>
-                    <p className="text-gray-900 font-bold leading-tight">{unit.installDate}</p>
+                    <p className="text-gray-400 text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Data Instalação</p>
+                    <p className="text-gray-900 font-bold leading-tight text-sm sm:text-base">{unit.installDate}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="w-full md:w-40 flex flex-col items-center justify-center p-6 bg-gray-50/50 rounded-[2rem] border border-gray-100">
-                <img src={qrUrl} alt="QR" className="w-28 h-28 mb-4 rounded-xl border border-gray-100" />
+              <div className="w-full md:w-40 flex flex-col items-center justify-center p-4 sm:p-6 bg-gray-50/50 rounded-[1.5rem] sm:rounded-[2rem] border border-gray-100">
+                <img src={qrUrl} alt="QR" className="w-24 h-24 sm:w-28 sm:h-28 mb-3 sm:mb-4 rounded-xl border border-gray-100" />
                 {/* Alterado text-blue-600 para text-purple-700 */}
-                <button onClick={() => onOpenQR(unit)} className="text-[10px] font-black text-purple-700 uppercase tracking-tighter flex items-center gap-1.5">
+                <button onClick={() => onOpenQR(unit)} className="text-[9px] sm:text-[10px] font-black text-purple-700 uppercase tracking-tighter flex items-center gap-1.5">
                   <Maximize className="w-3 h-3" /> Ampliar QR
                 </button>
               </div>
             </div>
 
-            <div className="pt-8 border-t border-gray-50 space-y-4">
+            <div className="pt-6 sm:pt-8 border-t border-gray-50 space-y-4">
               {!isPublic && (
                 <>
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link de Consulta Rápida</label>
-                  <div className="flex gap-2">
-                    <div className="flex-1 bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-[10px] font-bold text-gray-400 truncate flex items-center">{publicLink}</div>
+                  <label className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Link de Consulta Rápida</label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-[9px] sm:text-[10px] font-bold text-gray-400 truncate flex items-center min-h-[44px]">{publicLink}</div>
                     <button 
                       onClick={() => { navigator.clipboard.writeText(publicLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
                       // Alterado bg-white text-blue-600 border-blue-100 para text-purple-700 border-purple-100
-                      className={`px-6 py-3 rounded-xl font-black text-[10px] flex items-center gap-2 transition-all ${copied ? 'bg-green-600 text-white' : 'bg-white text-purple-700 border border-purple-100'}`}
+                      className={`px-4 sm:px-6 py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all flex-shrink-0 ${copied ? 'bg-green-600 text-white' : 'bg-white text-purple-700 border border-purple-100'}`}
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       {copied ? 'Copiado' : 'Link'}
@@ -268,22 +273,22 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
                 </>
               )}
               
-              <button onClick={handleOpenWhatsApp} className="w-full bg-orange-600 text-white py-5 rounded-[1.8rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-lg">
-                <MessageSquare className="w-6 h-6" /> Abrir Chamado Técnico
+              <button onClick={handleOpenWhatsApp} className="w-full bg-orange-600 text-white py-4 sm:py-5 rounded-2xl sm:rounded-[1.8rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-base sm:text-lg">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" /> Abrir Chamado Técnico
               </button>
             </div>
           </>
         )}
       </div>
 
-      <div className="flex bg-gray-200/50 p-1.5 rounded-[1.8rem] mb-8">
+      <div className="flex bg-gray-200/50 p-1 rounded-2xl sm:rounded-[1.8rem] mb-8 overflow-x-auto no-scrollbar">
         {['history', 'planned', 'ai'].map(t => (
           (t !== 'ai' || !isPublic) && (
             <button 
               key={t} 
               onClick={() => setActiveTab(t as any)} 
               // Alterado text-blue-600 para text-purple-700
-              className={`flex-1 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-white shadow-lg text-purple-700' : 'text-gray-500'}`}
+              className={`flex-1 py-3.5 sm:py-4 px-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === t ? 'bg-white shadow-lg text-purple-700' : 'text-gray-500'}`}
             >
               {t === 'history' ? 'Histórico' : t === 'planned' ? 'Próximas' : 'IA Insights'}
             </button>
@@ -297,28 +302,39 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
         )}
         
         {activeTab === 'history' && unit.history.map(r => (
-          <div key={r.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-50 shadow-sm relative overflow-hidden">
+          <div key={r.id} className="bg-white p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-gray-50 shadow-sm relative overflow-hidden">
             {/* Alterado bg-blue-500 para bg-purple-600 */}
-            <div className="absolute left-0 top-0 w-2 h-full bg-purple-600"></div>
-            <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-4">
-              <div className="flex-1 w-full">
-                <h4 className="font-black text-gray-900 text-xl leading-none mb-1">{r.type}</h4>
+            <div className="absolute left-0 top-0 w-1.5 sm:w-2 h-full bg-purple-600"></div>
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4 sm:gap-6 mb-4">
+              <div className="flex-1 w-full min-w-0">
+                <div className="flex items-center justify-between mb-1 gap-2">
+                  <h4 className="font-black text-gray-900 text-lg sm:text-xl leading-tight truncate">{r.type}</h4>
+                  {!isPublic && (user?.role === UserRole.ADMIN || user?.role === UserRole.TECHNICIAN) && (
+                    <button 
+                      onClick={() => { setEditingMaintenance(r); setIsMaintenanceModalOpen(true); }}
+                      className="p-2 text-gray-400 hover:text-purple-700 hover:bg-purple-50 rounded-xl transition-all flex-shrink-0"
+                      title="Editar Registro"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
                 {/* Alterado text-blue-500 para text-purple-600 */}
-                <p className="text-[10px] text-gray-400 font-black uppercase flex items-center gap-2 tracking-widest mb-3">
-                  <CalendarDays className="w-4 h-4 text-purple-600" /> {r.date} {r.time && `• ${r.time}`}
+                <p className="text-[9px] sm:text-[10px] text-gray-400 font-black uppercase flex items-center gap-2 tracking-widest mb-3">
+                  <CalendarDays className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" /> {r.date} {r.time && `• ${r.time}`}
                 </p>
                 {/* Alterado tons de azul para roxo */}
-                <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-2xl border border-purple-100 w-fit">
-                  <div className="bg-purple-700 p-2 rounded-xl">
-                    <UserIconComponent className="w-4 h-4 text-white" />
+                <div className="flex items-center gap-3 p-2.5 sm:p-3 bg-purple-50 rounded-xl sm:rounded-2xl border border-purple-100 w-fit max-w-full">
+                  <div className="bg-purple-700 p-1.5 sm:p-2 rounded-lg sm:rounded-xl flex-shrink-0">
+                    <UserIconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                   </div>
-                  <div>
-                    <p className="text-[9px] font-black text-purple-400 uppercase tracking-widest leading-none mb-0.5">Técnico Responsável</p>
-                    <p className="font-black text-purple-900 text-sm">{r.technician}</p>
+                  <div className="min-w-0">
+                    <p className="text-[8px] sm:text-[9px] font-black text-purple-400 uppercase tracking-widest leading-none mb-0.5 truncate">Técnico Responsável</p>
+                    <p className="font-black text-purple-900 text-xs sm:text-sm truncate">{r.technician}</p>
                   </div>
                 </div>
               </div>
-              <div className="w-full md:w-auto flex justify-center">
+              <div className="w-full md:w-auto flex justify-center md:justify-end">
                 <StarRating 
                   recordId={r.id} 
                   currentRating={r.rating} 
@@ -326,14 +342,27 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
                 />
               </div>
             </div>
-            <p className="text-gray-600 text-sm leading-relaxed mt-4 whitespace-pre-line">{r.description}</p>
+            <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mt-4 whitespace-pre-line">{r.description}</p>
             
             {/* Photos Display */}
             {r.photos && r.photos.length > 0 && (
-               <div className="mt-6 flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-                  {r.photos.map((p, i) => (
-                    <img key={i} src={p} className="w-20 h-20 rounded-xl object-cover border border-gray-100 flex-shrink-0" />
-                  ))}
+               <div className="mt-6 space-y-4">
+                  <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                    {r.photos.map((p, i) => (
+                      <div key={i} className="flex-shrink-0 space-y-1">
+                        <img src={p} className="w-24 h-24 rounded-xl object-cover border border-gray-100" />
+                        {r.photoDescriptions?.[i] && (
+                          <p className="text-[8px] text-gray-400 font-medium max-w-[96px] truncate">{r.photoDescriptions[i]}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => setReportRecord(r)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                  >
+                    <Camera className="w-4 h-4" /> Gerar Relatório Fotográfico
+                  </button>
                </div>
             )}
 
@@ -411,10 +440,27 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
       )}
 
       {isMaintenanceModalOpen && (
-        <NewMaintenanceModal 
+        <MaintenanceModal 
           unit={unit} 
-          onClose={() => setIsMaintenanceModalOpen(false)} 
-          onSave={(rec) => { onAddMaintenance(unit.id, rec); setIsMaintenanceModalOpen(false); }} 
+          initialData={editingMaintenance}
+          onClose={() => { setIsMaintenanceModalOpen(false); setEditingMaintenance(null); }} 
+          onSave={(rec) => { 
+            if (editingMaintenance) {
+              onUpdateMaintenance(unit.id, editingMaintenance.id, rec);
+            } else {
+              onAddMaintenance(unit.id, rec); 
+            }
+            setIsMaintenanceModalOpen(false); 
+            setEditingMaintenance(null);
+          }} 
+        />
+      )}
+
+      {reportRecord && (
+        <PhotoReportModal 
+          data={reportRecord} 
+          unit={unit} 
+          onClose={() => setReportRecord(null)} 
         />
       )}
       <style>{`
@@ -430,14 +476,15 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
   );
 };
 
-const NewMaintenanceModal = ({ unit, onClose, onSave }: { unit: ACUnit, onClose: () => void, onSave: (r: MaintenanceRecord) => void }) => {
+const MaintenanceModal = ({ unit, initialData, onClose, onSave }: { unit: ACUnit, initialData: MaintenanceRecord | null, onClose: () => void, onSave: (r: MaintenanceRecord) => void }) => {
   const [form, setForm] = useState({
-    type: ServiceType.PREVENTIVE,
-    technician: '',
-    description: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    photos: [] as string[]
+    type: initialData?.type || ServiceType.PREVENTIVE,
+    technician: initialData?.technician || '',
+    description: initialData?.description || '',
+    date: initialData?.date || new Date().toISOString().split('T')[0],
+    time: initialData?.time || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    photos: initialData?.photos || [] as string[],
+    photoDescriptions: initialData?.photoDescriptions || [] as string[]
   });
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -446,26 +493,36 @@ const NewMaintenanceModal = ({ unit, onClose, onSave }: { unit: ACUnit, onClose:
       return new Promise<string>(resolve => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
-        // Fix: Cast file to Blob to satisfy TypeScript compiler
         reader.readAsDataURL(file as Blob);
       });
     });
     const base64s = await Promise.all(readers);
-    setForm(prev => ({ ...prev, photos: [...prev.photos, ...base64s] }));
+    setForm(prev => ({ 
+      ...prev, 
+      photos: [...prev.photos, ...base64s],
+      photoDescriptions: [...prev.photoDescriptions, ...base64s.map(() => '')]
+    }));
+  };
+
+  const removePhoto = (index: number) => {
+    setForm(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index),
+      photoDescriptions: prev.photoDescriptions.filter((_, i) => i !== index)
+    }));
   };
 
   return (
     <div className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-10 shadow-2xl my-8">
         <div className="flex justify-between items-center mb-8">
-          <h2 className="text-2xl font-black italic tracking-tighter">Registrar Serviço</h2>
+          <h2 className="text-2xl font-black italic tracking-tighter">{initialData ? 'Editar Registro' : 'Registrar Serviço'}</h2>
           <button onClick={onClose} className="p-2 bg-gray-50 rounded-full"><X className="w-5 h-5" /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); onSave({ id: Date.now().toString(), ...form }); }} className="space-y-5">
+        <form onSubmit={(e) => { e.preventDefault(); onSave({ id: initialData?.id || Date.now().toString(), ...form }); }} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo <span className="text-red-500">*</span></label>
-              {/* Alterado focus:border-blue-500 para focus:border-purple-500 */}
               <select className="w-full px-5 py-3.5 bg-gray-50 rounded-xl font-bold border-2 border-transparent focus:border-purple-500 outline-none" value={form.type} onChange={e => setForm({...form, type: e.target.value as ServiceType})} required>
                 {Object.values(ServiceType).map(v => <option key={v} value={v}>{v}</option>)}
               </select>
@@ -491,21 +548,40 @@ const NewMaintenanceModal = ({ unit, onClose, onSave }: { unit: ACUnit, onClose:
           </div>
           <div className="space-y-3">
              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Anexar Fotos</label>
-             <div className="grid grid-cols-4 gap-2">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {form.photos.map((p, i) => (
-                   <img key={i} src={p} className="w-full aspect-square rounded-lg object-cover" />
+                   <div key={i} className="space-y-2 relative group">
+                      <button 
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all z-10"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                      <img src={p} className="w-full aspect-video rounded-xl object-cover border border-gray-200" />
+                      <input 
+                        type="text" 
+                        placeholder="Descrição da foto..." 
+                        className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[10px] font-medium outline-none focus:border-purple-500"
+                        value={form.photoDescriptions[i] || ''}
+                        onChange={(e) => {
+                          const newDescs = [...form.photoDescriptions];
+                          newDescs[i] = e.target.value;
+                          setForm({ ...form, photoDescriptions: newDescs });
+                        }}
+                      />
+                   </div>
                 ))}
-                {form.photos.length < 4 && (
-                   // Alterado hover:bg-blue-50 para hover:bg-purple-50
-                   <label className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:bg-purple-50">
+                {form.photos.length < 8 && (
+                   <label className="aspect-video rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:bg-purple-50 transition-all">
                       <Plus className="w-6 h-6 text-gray-300" />
+                      <span className="text-[8px] font-black uppercase mt-1">Add Foto</span>
                       <input type="file" multiple accept="image/*" className="hidden" onChange={handlePhotoUpload} />
                    </label>
                 )}
              </div>
           </div>
-          {/* Alterado bg-blue-600 para bg-purple-700 */}
-          <button type="submit" className="w-full bg-purple-700 text-white py-5 rounded-[1.8rem] font-black shadow-xl active:scale-95 transition-all text-lg mt-4">Salvar Registro</button>
+          <button type="submit" className="w-full bg-purple-700 text-white py-5 rounded-[1.8rem] font-black shadow-xl active:scale-95 transition-all text-lg mt-4">{initialData ? 'Atualizar Registro' : 'Salvar Registro'}</button>
         </form>
       </div>
     </div>
