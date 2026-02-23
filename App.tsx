@@ -109,8 +109,7 @@ const App: React.FC = () => {
     solution: t.solution,
     technicalReport: t.technical_report,
     photos: t.photos || [],
-    documents: t.documents || [],
-    waNotified: t.wa_notified
+    documents: t.documents || []
   });
 
   // --- Fetch Data ---
@@ -454,8 +453,7 @@ const App: React.FC = () => {
         date: ticket.date,
         status: ticket.status,
         priority: ticket.priority,
-        technician_id: ticket.technicianId,
-        wa_notified: ticket.waNotified || false
+        technician_id: ticket.technicianId
       };
       
       const { error } = await supabase.from('tickets').insert(dbTicket);
@@ -479,7 +477,6 @@ const App: React.FC = () => {
       if (data.technicalReport) dbUpdate.technical_report = data.technicalReport;
       if (data.photos) dbUpdate.photos = data.photos;
       if (data.documents) dbUpdate.documents = data.documents;
-      if (data.waNotified !== undefined) dbUpdate.wa_notified = data.waNotified;
 
       const { error } = await supabase.from('tickets').update(dbUpdate).eq('id', id);
       if (error) throw error;

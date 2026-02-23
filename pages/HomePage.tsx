@@ -33,7 +33,9 @@ import {
   FileText,
   Upload,
   ArrowRightLeft,
-  Fan
+  Fan,
+  LayoutList,
+  LayoutGrid
 } from 'lucide-react';
 import { ACUnit, User, UserRole, Ticket, UnitStatus, ServiceType } from '../types';
 import QRScannerModal from '../components/QRScannerModal';
@@ -99,6 +101,16 @@ const HomePage: React.FC<HomePageProps> = ({
   const [remindMaintenanceTicket, setRemindMaintenanceTicket] = useState<Ticket | null>(null);
   const [nextMaintenanceDate, setNextMaintenanceDate] = useState('');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+  const [notifiedTickets, setNotifiedTickets] = useState<string[]>(() => {
+    const saved = localStorage.getItem('arcontrol_notified_tickets');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [ticketViewMode, setTicketViewMode] = useState<'list' | 'grid'>(() => {
+    const saved = localStorage.getItem('arcontrol_ticket_view_mode');
+    return (saved as 'list' | 'grid') || 'grid';
+  });
 
   const navigate = useNavigate();
 
@@ -245,14 +257,21 @@ const HomePage: React.FC<HomePageProps> = ({
   };
 
   const handleNotifyTechnician = (ticket: Ticket) => {
+    if (notifiedTickets.includes(ticket.id)) return;
+
     const techPhone = "71988638342"; 
     const message = `*NOVO CHAMADO ABERTO - ArControl*\n\n*ID do Chamado:* ${ticket.id}\n*Equipamento:* ${ticket.unitId || 'Não Vinculado'}\n*Cliente:* ${ticket.clientName}\n*Prioridade:* ${ticket.priority}\n*Descrição:* ${ticket.description}\n*Data de Previsão:* ${ticket.date}\n\n_Por favor, verifique o painel administrativo._`;
     window.open(`https://wa.me/${techPhone}?text=${encodeURIComponent(message)}`, '_blank');
-    
-    // Mark as notified
-    if (!ticket.waNotified) {
-      onUpdateTicket(ticket.id, { waNotified: true });
-    }
+
+    const updatedNotified = [...notifiedTickets, ticket.id];
+    setNotifiedTickets(updatedNotified);
+    localStorage.setItem('arcontrol_notified_tickets', JSON.stringify(updatedNotified));
+  };
+
+  const toggleTicketViewMode = () => {
+    const newMode = ticketViewMode === 'grid' ? 'list' : 'grid';
+    setTicketViewMode(newMode);
+    localStorage.setItem('arcontrol_ticket_view_mode', newMode);
   };
 
   const handleAcceptTicket = (ticket: Ticket) => {
@@ -420,14 +439,22 @@ const HomePage: React.FC<HomePageProps> = ({
     if (status === 'Em Atendimento') return 'border-orange-300 bg-orange-50 shadow-orange-100 ring-1 ring-orange-200';
     if (status === 'Reagendado') return 'border-indigo-300 bg-indigo-50 shadow-indigo-100';
     
+    let baseStyles = '';
     switch (priority) {
-      case 'Urgente': return 'border-red-600 bg-red-50 shadow-red-200';
-      case 'Alta': return 'border-orange-500 bg-orange-50 shadow-orange-100';
-      // Dynamic primary color for Media priority
-      case 'Média': return 'border-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm';
-      case 'Baixa': return 'border-emerald-500 bg-emerald-50 shadow-emerald-100';
-      default: return 'border-gray-100 bg-white shadow-gray-100';
+      case 'Urgente': baseStyles = 'border-red-600 bg-red-50 shadow-red-200'; break;
+      case 'Alta': baseStyles = 'border-orange-500 bg-orange-50 shadow-orange-100'; break;
+      case 'Média': baseStyles = 'border-[var(--theme-primary)] bg-[var(--theme-primary-light)] shadow-sm'; break;
+      case 'Baixa': baseStyles = 'border-emerald-500 bg-emerald-50 shadow-emerald-100'; break;
+      default: baseStyles = 'border-gray-100 bg-white shadow-gray-100'; break;
     }
+
+    if (status === 'Aberto') {
+      // Add pulsing animation and stronger border for open tickets
+      const pulseClass = priority === 'Urgente' || priority === 'Alta' ? 'animate-alert-pulsing' : 'animate-status-pulse-blue';
+      return `${baseStyles} ${pulseClass} ring-2 ring-offset-2 ${priority === 'Urgente' ? 'ring-red-500' : 'ring-orange-400'} border-opacity-100`;
+    }
+
+    return baseStyles;
   };
 
   const getPriorityBadgeStyles = (priority: string, status: string) => {
@@ -639,234 +666,319 @@ const HomePage: React.FC<HomePageProps> = ({
              <Bell className="w-6 h-6 text-[var(--theme-primary)]" />
              <h2 className="text-xl font-black tracking-tighter italic text-[var(--theme-text)]">Chamados Ativos</h2>
           </div>
-          <button 
-            onClick={handleOpenTicketModal}
-            className="p-3 bg-gray-900 text-white rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
-          >
-            <Plus className="w-5 h-5" /> <span className="text-xs font-black uppercase tracking-widest">Abrir Chamado</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm mr-2">
+              <button 
+                onClick={() => { setTicketViewMode('grid'); localStorage.setItem('arcontrol_ticket_view_mode', 'grid'); }}
+                className={`p-2 rounded-lg transition-all ${ticketViewMode === 'grid' ? 'bg-[var(--theme-primary)] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
+                title="Visualização em Grade"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => { setTicketViewMode('list'); localStorage.setItem('arcontrol_ticket_view_mode', 'list'); }}
+                className={`p-2 rounded-lg transition-all ${ticketViewMode === 'list' ? 'bg-[var(--theme-primary)] text-white shadow-md' : 'text-gray-400 hover:bg-gray-50'}`}
+                title="Visualização em Lista"
+              >
+                <LayoutList className="w-4 h-4" />
+              </button>
+            </div>
+            <button 
+              onClick={handleOpenTicketModal}
+              className="p-3 bg-gray-900 text-white rounded-2xl shadow-lg active:scale-95 transition-all flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" /> <span className="text-xs font-black uppercase tracking-widest hidden sm:inline">Abrir Chamado</span>
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-4">
+        <div className={ticketViewMode === 'grid' ? "grid gap-4" : "flex flex-col gap-3"}>
           {sortedTickets.length > 0 ? sortedTickets.map(ticket => (
-            <div 
-              key={ticket.id} 
-              className={`p-6 rounded-[2.2rem] border-2 transition-all group ${getPriorityStyles(ticket.priority, ticket.status)}`}
-            >
-              <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-                <div className="space-y-1 flex-1">
-                  
-                  {/* MODIFIED HEADER: Status + Date Highlight */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getPriorityBadgeStyles(ticket.priority, ticket.status)}`}>
-                      {ticket.status === 'Em Atendimento' ? 'EM ANDAMENTO' : (ticket.status === 'Reagendado' ? 'REAGENDADO' : ticket.priority)}
-                    </span>
+            ticketViewMode === 'grid' ? (
+              <div 
+                key={ticket.id} 
+                className={`p-6 rounded-[2.2rem] border-2 transition-all group ${getPriorityStyles(ticket.priority, ticket.status)}`}
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+                  <div className="space-y-1 flex-1">
+                    
+                    {/* MODIFIED HEADER: Status + Date Highlight */}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getPriorityBadgeStyles(ticket.priority, ticket.status)}`}>
+                        {ticket.status === 'Em Atendimento' ? 'EM ANDAMENTO' : (ticket.status === 'Reagendado' ? 'REAGENDADO' : ticket.priority)}
+                      </span>
 
-                    {ticket.status === 'Aberto' && (
-                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-[var(--theme-primary)]">
-                        <Fan className="w-3 h-3" />
-                        <span className="text-[9px] font-black tracking-widest uppercase">Aguardando Técnico</span>
-                      </div>
-                    )}
-
-                    {/* NEW DATE HIGHLIGHT BADGE - LARGER AND PULSING */}
-                    <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border shadow-lg animate-date-pulse ${ticket.status === 'Reagendado' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-gray-900 text-white border-transparent'}`} title="Data Agendada">
-                       <CalendarClock className="w-5 h-5" />
-                       <span className="text-sm font-black tracking-widest">{ticket.date.split('-').reverse().join('/')}</span>
-                    </div>
-
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{ticket.id}</span>
-                  </div>
-
-                  {/* Ticket Times: Opening and Closing */}
-                  <div className="flex gap-4 mb-3">
-                    {ticket.openedAt && (
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Aberto: <span className="text-gray-900">{ticket.openedAt}</span></p>
-                      </div>
-                    )}
-                    {ticket.finishedAt && (
-                      <div className="flex items-center gap-1.5 text-gray-500">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Finalizado: <span className="text-gray-900">{ticket.finishedAt}</span></p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <h4 className="font-black text-[var(--theme-text)] text-lg leading-tight mb-3">{ticket.description}</h4>
-                  
-                  {/* Highlighted Client and Technician Info */}
-                  <div className="flex flex-wrap gap-3 mb-2">
-                    {/* Dynamic style for Client */}
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-primary-light)] text-[var(--theme-primary)] rounded-lg border-l-4 border-[var(--theme-primary)] shadow-sm">
-                      <Building2 className="w-4 h-4" />
-                      <div>
-                        <p className="text-[8px] opacity-70 font-bold uppercase tracking-widest leading-none">Cliente</p>
-                        <p className="font-black text-xs uppercase tracking-wide">{ticket.clientName}</p>
-                      </div>
-                    </div>
-
-                    {ticket.technicianId && (
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-900 rounded-lg border-l-4 border-orange-600 shadow-sm">
-                        <Wrench className="w-4 h-4 text-orange-700" />
-                        <div>
-                          <p className="text-[8px] text-orange-600/70 font-bold uppercase tracking-widest leading-none">Técnico</p>
-                          <p className="font-black text-xs uppercase tracking-wide">{ticket.technicianId}</p>
+                      {ticket.status === 'Aberto' && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-gray-200 shadow-sm text-[var(--theme-primary)]">
+                          <Fan className="w-3 h-3" />
+                          <span className="text-[9px] font-black tracking-widest uppercase">Aguardando Técnico</span>
                         </div>
+                      )}
+
+                      {/* NEW DATE HIGHLIGHT BADGE - LARGER AND PULSING */}
+                      <div className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl border shadow-lg animate-date-pulse ${ticket.status === 'Reagendado' ? 'bg-indigo-600 text-white border-indigo-400' : 'bg-gray-900 text-white border-transparent'}`} title="Data Agendada">
+                         <CalendarClock className="w-5 h-5" />
+                         <span className="text-sm font-black tracking-widest">{ticket.date.split('-').reverse().join('/')}</span>
                       </div>
-                    )}
-                  </div>
 
-                  {ticket.unitId && (
-                    <p className="text-xs font-bold text-gray-500 flex items-center gap-1 ml-1 mb-2">
-                       <Thermometer className="w-3 h-3" /> Equipamento: {ticket.unitId}
-                    </p>
-                  )}
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{ticket.id}</span>
+                    </div>
 
-                  {/* Service Report Display (Visible when ticket is Completed) */}
-                  {ticket.status === 'Concluído' && ticket.solution && (
-                    <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-gray-200">
-                      <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Relatório de Serviço
-                      </p>
-                      <p className="text-xs font-medium text-gray-800 mb-3">{ticket.solution}</p>
-                      {ticket.photos && ticket.photos.length > 0 && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                          {ticket.photos.map((photo, idx) => (
-                            <img key={idx} src={photo} alt="Serviço" className="w-16 h-16 rounded-xl object-cover border border-gray-100" />
-                          ))}
+                    {/* Ticket Times: Opening and Closing */}
+                    <div className="flex gap-4 mb-3">
+                      {ticket.openedAt && (
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <p className="text-[10px] font-black uppercase tracking-widest">Aberto: <span className="text-gray-900">{ticket.openedAt}</span></p>
+                        </div>
+                      )}
+                      {ticket.finishedAt && (
+                        <div className="flex items-center gap-1.5 text-gray-500">
+                          <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                          <p className="text-[10px] font-black uppercase tracking-widest">Finalizado: <span className="text-gray-900">{ticket.finishedAt}</span></p>
                         </div>
                       )}
                     </div>
-                  )}
-                  
-                  {/* Justification for Rescheduled */}
-                  {ticket.status === 'Reagendado' && ticket.rescheduleReason && (
-                    <div className="mt-3 p-3 bg-indigo-100 rounded-xl border border-indigo-200">
-                      <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 flex items-center gap-1">
-                        <History className="w-3 h-3" /> Motivo do Reagendamento
-                      </p>
-                      <p className="text-xs font-medium text-indigo-900">{ticket.rescheduleReason}</p>
+                    
+                    <h4 className="font-black text-[var(--theme-text)] text-lg leading-tight mb-3">{ticket.description}</h4>
+                    
+                    {/* Highlighted Client and Technician Info */}
+                    <div className="flex flex-wrap gap-3 mb-2">
+                      {/* Dynamic style for Client */}
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-primary-light)] text-[var(--theme-primary)] rounded-lg border-l-4 border-[var(--theme-primary)] shadow-sm">
+                        <Building2 className="w-4 h-4" />
+                        <div>
+                          <p className="text-[8px] opacity-70 font-bold uppercase tracking-widest leading-none">Cliente</p>
+                          <p className="font-black text-xs uppercase tracking-wide">{ticket.clientName}</p>
+                        </div>
+                      </div>
+
+                      {ticket.technicianId && (
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-900 rounded-lg border-l-4 border-orange-600 shadow-sm">
+                          <Wrench className="w-4 h-4 text-orange-700" />
+                          <div>
+                            <p className="text-[8px] text-orange-600/70 font-bold uppercase tracking-widest leading-none">Técnico</p>
+                            <p className="font-black text-xs uppercase tracking-wide">{ticket.technicianId}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
 
-                  {/* Rating Display for Completed Tickets */}
-                  {ticket.status === 'Concluído' && ticket.rating && (
-                     <div className="flex items-center gap-1 mt-2">
-                        {[...Array(5)].map((_, i) => (
-                           <Star key={i} className={`w-3 h-3 ${i < ticket.rating! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
-                        ))}
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Avaliado</span>
-                     </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                   {/* Transfer Action */}
-                   {(user.role === UserRole.ADMIN || (user.role === UserRole.TECHNICIAN && ticket.technicianId === user.username)) && ticket.status !== 'Concluído' && (
-                       <button
-                           onClick={() => handleOpenTransferModal(ticket)}
-                           className="flex-1 md:flex-none p-3 bg-blue-600 text-white rounded-xl shadow-lg active:scale-90 transition-all"
-                           title="Transferir Chamado"
+                    {ticket.unitId && (
+                      <p className="text-xs font-bold text-gray-500 flex items-center gap-1 ml-1 mb-2">
+                         <Thermometer className="w-3 h-3" /> Equipamento: {ticket.unitId}
+                      </p>
+                    )}
+
+                    {/* Service Report Display (Visible when ticket is Completed) */}
+                    {ticket.status === 'Concluído' && ticket.solution && (
+                      <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-gray-200">
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Relatório de Serviço
+                        </p>
+                        <p className="text-xs font-medium text-gray-800 mb-3">{ticket.solution}</p>
+                        {ticket.photos && ticket.photos.length > 0 && (
+                          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                            {ticket.photos.map((photo, idx) => (
+                              <img key={idx} src={photo} alt="Serviço" className="w-16 h-16 rounded-xl object-cover border border-gray-100" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Justification for Rescheduled */}
+                    {ticket.status === 'Reagendado' && ticket.rescheduleReason && (
+                      <div className="mt-3 p-3 bg-indigo-100 rounded-xl border border-indigo-200">
+                        <p className="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                          <History className="w-3 h-3" /> Motivo do Reagendamento
+                        </p>
+                        <p className="text-xs font-medium text-indigo-900">{ticket.rescheduleReason}</p>
+                      </div>
+                    )}
+
+                    {/* Rating Display for Completed Tickets */}
+                    {ticket.status === 'Concluído' && ticket.rating && (
+                       <div className="flex items-center gap-1 mt-2">
+                          {[...Array(5)].map((_, i) => (
+                             <Star key={i} className={`w-3 h-3 ${i < ticket.rating! ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                          ))}
+                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Avaliado</span>
+                       </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 w-full md:w-auto">
+                     {/* Ficha do Equipamento Shortcut */}
+                     {user.role === UserRole.TECHNICIAN && ticket.unitId && (
+                        <button 
+                          onClick={() => navigate(`/unit/${ticket.unitId}`)}
+                          className="flex-1 md:flex-none p-3 bg-slate-700 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
+                          title="Ficha do Equipamento"
+                        >
+                          <FileText className="w-5 h-5 mx-auto" />
+                          <span className="text-[10px] font-black uppercase hidden sm:inline">Ficha</span>
+                        </button>
+                     )}
+
+                     {/* Transfer Action */}
+                     {(user.role === UserRole.ADMIN || (user.role === UserRole.TECHNICIAN && ticket.technicianId === user.username)) && ticket.status !== 'Concluído' && (
+                         <button
+                             onClick={() => handleOpenTransferModal(ticket)}
+                             className="flex-1 md:flex-none p-3 bg-blue-600 text-white rounded-xl shadow-lg active:scale-90 transition-all"
+                             title="Transferir Chamado"
+                         >
+                             <ArrowRightLeft className="w-5 h-5 mx-auto" />
+                         </button>
+                     )}
+
+                     {/* Technician Action: Accept */}
+                     {user.role === UserRole.TECHNICIAN && ticket.status === 'Aberto' && (
+                        <button 
+                          onClick={() => handleAcceptTicket(ticket)}
+                          className="flex-1 md:flex-none px-4 py-3 bg-orange-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
+                          title="Aceitar Chamado"
+                        >
+                          <PlayCircle className="w-5 h-5" /> <span className="text-xs font-black uppercase">Aceitar</span>
+                        </button>
+                     )}
+
+                     {/* Technician Secondary Action: Reschedule */}
+                     {user.role === UserRole.TECHNICIAN && (ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username && (
+                        <button 
+                          onClick={() => handleOpenReschedule(ticket)}
+                          className="flex-1 md:flex-none p-3 bg-indigo-500 text-white rounded-xl shadow-lg active:scale-90 transition-all"
+                          title="Reagendar Chamado"
+                        >
+                          <CalendarClock className="w-5 h-5 mx-auto" />
+                        </button>
+                     )}
+
+                     {/* Client Rating Action */}
+                     {user.role === UserRole.CLIENT && ticket.status === 'Concluído' && !ticket.rating && (
+                       <button 
+                         onClick={() => { setRatingTicket(ticket); setRatingValue(0); }}
+                         className="flex-1 md:flex-none px-4 py-3 bg-yellow-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
                        >
-                           <ArrowRightLeft className="w-5 h-5 mx-auto" />
+                         <Star className="w-5 h-5" /> <span className="text-xs font-black uppercase">Avaliar</span>
                        </button>
-                   )}
+                     )}
 
-                   {/* Technician Secondary Action: Reschedule */}
-                   {user.role === UserRole.TECHNICIAN && (ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username && (
+                     {/* General Actions */}
+                     {ticket.status === 'Concluído' && user.role === UserRole.ADMIN && (
+                       <button 
+                         onClick={() => handleRemindUser(ticket)}
+                         className="flex-1 md:flex-none p-3 bg-indigo-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2 group/remind"
+                         title="Relembrar Cliente"
+                       >
+                         <Bell className="w-5 h-5 mx-auto" />
+                         <span className="text-[10px] font-black uppercase hidden sm:inline">Relembrar</span>
+                       </button>
+                     )}
+
+                     {ticket.status !== 'Concluído' && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT) && (
+                       <button 
+                         onClick={() => handleNotifyTechnician(ticket)}
+                         className={`flex-1 md:flex-none p-3 rounded-xl shadow-lg active:scale-90 transition-all ${
+                           notifiedTickets.includes(ticket.id)
+                             ? 'bg-gray-200 text-gray-500 shadow-none cursor-default' 
+                             : 'bg-emerald-600 text-white shadow-emerald-100'
+                         }`}
+                         title={notifiedTickets.includes(ticket.id) ? "Notificação já enviada" : "Notificar via WhatsApp"}
+                         disabled={notifiedTickets.includes(ticket.id)}
+                       >
+                         {notifiedTickets.includes(ticket.id) ? <CheckCircle2 className="w-5 h-5 mx-auto" /> : <Send className="w-5 h-5 mx-auto" />}
+                       </button>
+                     )}
+                     
+                     {(user.role === UserRole.ADMIN || (user.role === UserRole.CLIENT && ticket.status === 'Aberto')) && (
+                       <>
+                          <button 
+                            onClick={() => handleEditTicketModal(ticket)}
+                            className="flex-1 md:flex-none p-3 bg-white text-gray-900 border border-gray-200 rounded-xl shadow-sm active:scale-90 transition-all"
+                          >
+                            <Pencil className="w-5 h-5 mx-auto" />
+                          </button>
+                          <button 
+                            onClick={() => setDeleteTicketConfirmation(ticket)}
+                            className="flex-1 md:flex-none p-3 bg-white text-red-500 border border-red-100 rounded-xl shadow-sm active:scale-90 transition-all"
+                          >
+                            <Trash2 className="w-5 h-5 mx-auto" />
+                          </button>
+                       </>
+                     )}
+                  </div>
+                </div>
+
+                {/* Quick Action Bar for Technicians */}
+                {user.role === UserRole.TECHNICIAN && (ticket.status === 'Aberto' || ((ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username)) && (
+                  <div className="mt-6 pt-4 border-t border-gray-100/50 relative z-10">
+                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Ação Rápida do Técnico</p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {ticket.status === 'Aberto' ? (
                       <button 
-                        onClick={() => handleOpenReschedule(ticket)}
-                        className="flex-1 md:flex-none p-3 bg-indigo-500 text-white rounded-xl shadow-lg active:scale-90 transition-all"
-                        title="Reagendar Chamado"
+                        onClick={() => handleAcceptTicket(ticket)}
+                        className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
                       >
-                        <CalendarClock className="w-5 h-5 mx-auto" />
+                        <PlayCircle className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
+                        <span>Aceitar Chamado Agora</span>
                       </button>
-                   )}
+                    ) : (
+                      <button 
+                        onClick={() => handleOpenFinishModal(ticket)}
+                        className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
+                      >
+                        <CheckSquare className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
+                        <span>Finalizar Serviço</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
+            ) : (
+              /* COMPACT LIST VIEW */
+              <div 
+                key={ticket.id} 
+                className={`p-4 rounded-2xl border-2 transition-all flex items-center gap-4 ${getPriorityStyles(ticket.priority, ticket.status)}`}
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  ticket.status === 'Concluído' ? 'bg-gray-100 text-gray-400' : 
+                  ticket.status === 'Em Atendimento' ? 'bg-orange-100 text-orange-600' : 
+                  ticket.priority === 'Urgente' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'
+                }`}>
+                  {ticket.status === 'Concluído' ? <CheckCircle2 className="w-6 h-6" /> : 
+                   ticket.status === 'Em Atendimento' ? <Activity className="w-6 h-6 animate-pulse" /> : 
+                   <Bell className="w-6 h-6" />}
+                </div>
 
-                   {/* Client Rating Action */}
-                   {user.role === UserRole.CLIENT && ticket.status === 'Concluído' && !ticket.rating && (
-                     <button 
-                       onClick={() => { setRatingTicket(ticket); setRatingValue(0); }}
-                       className="flex-1 md:flex-none px-4 py-3 bg-yellow-500 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2"
-                     >
-                       <Star className="w-5 h-5" /> <span className="text-xs font-black uppercase">Avaliar</span>
-                     </button>
-                   )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{ticket.id}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest ${getPriorityBadgeStyles(ticket.priority, ticket.status)}`}>
+                      {ticket.status}
+                    </span>
+                    <span className="text-[9px] font-black text-gray-900 ml-auto">{ticket.date.split('-').reverse().join('/')}</span>
+                  </div>
+                  <h4 className="font-black text-[var(--theme-text)] text-sm truncate">{ticket.description}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[9px] font-bold text-gray-500 uppercase truncate max-w-[100px]">{ticket.clientName}</p>
+                    {ticket.unitId && (
+                      <span className="text-[9px] text-gray-400">• {ticket.unitId}</span>
+                    )}
+                  </div>
+                </div>
 
-                   {/* General Actions */}
-                   {ticket.status === 'Concluído' && user.role === UserRole.ADMIN && (
-                     <button 
-                       onClick={() => handleRemindUser(ticket)}
-                       className="flex-1 md:flex-none p-3 bg-indigo-600 text-white rounded-xl shadow-lg active:scale-90 transition-all flex items-center gap-2 group/remind"
-                       title="Relembrar Cliente"
-                     >
-                       <Bell className="w-5 h-5 mx-auto" />
-                       <span className="text-[10px] font-black uppercase hidden sm:inline">Relembrar</span>
-                     </button>
-                   )}
-
-                   {ticket.status !== 'Concluído' && (user.role === UserRole.ADMIN || user.role === UserRole.CLIENT) && (
-                     <button 
-                       onClick={() => handleNotifyTechnician(ticket)}
-                       className={`flex-1 md:flex-none p-3 rounded-xl shadow-lg active:scale-90 transition-all ${
-                         ticket.waNotified 
-                           ? 'bg-gray-200 text-gray-500 shadow-none cursor-default' 
-                           : 'bg-emerald-600 text-white shadow-emerald-100'
-                       }`}
-                       title={ticket.waNotified ? "Notificação já enviada" : "Notificar via WhatsApp"}
-                       disabled={ticket.waNotified}
-                     >
-                       {ticket.waNotified ? <CheckCircle2 className="w-5 h-5 mx-auto" /> : <Send className="w-5 h-5 mx-auto" />}
-                     </button>
-                   )}
-                   
-                   {(user.role === UserRole.ADMIN || (user.role === UserRole.CLIENT && ticket.status === 'Aberto')) && (
-                     <>
-                        <button 
-                          onClick={() => handleEditTicketModal(ticket)}
-                          className="flex-1 md:flex-none p-3 bg-white text-gray-900 border border-gray-200 rounded-xl shadow-sm active:scale-90 transition-all"
-                        >
-                          <Pencil className="w-5 h-5 mx-auto" />
-                        </button>
-                        <button 
-                          onClick={() => setDeleteTicketConfirmation(ticket)}
-                          className="flex-1 md:flex-none p-3 bg-white text-red-500 border border-red-100 rounded-xl shadow-sm active:scale-90 transition-all"
-                        >
-                          <Trash2 className="w-5 h-5 mx-auto" />
-                        </button>
-                     </>
-                   )}
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => handleEditTicketModal(ticket)}
+                    className="p-2 text-gray-400 hover:text-[var(--theme-primary)] transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
-
-              {/* Quick Action Bar for Technicians */}
-              {user.role === UserRole.TECHNICIAN && (ticket.status === 'Aberto' || ((ticket.status === 'Em Atendimento' || ticket.status === 'Reagendado') && ticket.technicianId === user.username)) && (
-                <div className="mt-6 pt-4 border-t border-gray-100/50 relative z-10">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Ação Rápida do Técnico</p>
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    {ticket.status === 'Aberto' ? (
-                    <button 
-                      onClick={() => handleAcceptTicket(ticket)}
-                      className="w-full py-4 bg-orange-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-orange-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
-                    >
-                      <PlayCircle className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
-                      <span>Aceitar Chamado Agora</span>
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => handleOpenFinishModal(ticket)}
-                      className="w-full py-4 bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-green-100 active:scale-95 transition-all flex items-center justify-center gap-3 group/btn"
-                    >
-                      <CheckSquare className="w-6 h-6 group-hover/btn:scale-110 transition-transform" /> 
-                      <span>Finalizar Serviço</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            </div>
+            )
           )) : (
             <div className="text-center py-10 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
                <p className="text-gray-300 font-black uppercase text-xs tracking-widest">Nenhum chamado pendente</p>
