@@ -1,0 +1,11 @@
+{
+<<<<<<< HEAD
+  "name": "ATUALIZAÇÂO ArControl - V02- 16/05/2026",
+=======
+  "name": "COPIA Remix: 09:42 ArControl - V02- 23/02/2026",
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+  "description": "A comprehensive air conditioning maintenance management system featuring QR code scanning, service history tracking, AI-powered diagnostic insights, and automated technician service requests.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
