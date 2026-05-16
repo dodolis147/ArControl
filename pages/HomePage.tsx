@@ -81,7 +81,10 @@ const HomePage: React.FC<HomePageProps> = ({
   const [ticketDate, setTicketDate] = useState(new Date().toISOString().split('T')[0]);
   const [ticketPhotos, setTicketPhotos] = useState<string[]>([]);
   const [ticketPhotoDescriptions, setTicketPhotoDescriptions] = useState<string[]>([]);
+<<<<<<< HEAD
   const [ticketTechnicalReport, setTicketTechnicalReport] = useState('');
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
   
   const [ratingTicket, setRatingTicket] = useState<Ticket | null>(null);
   const [ratingValue, setRatingValue] = useState(0);
@@ -203,7 +206,10 @@ const HomePage: React.FC<HomePageProps> = ({
     setTicketDate(ticket.date);
     setTicketPhotos(ticket.photos || []);
     setTicketPhotoDescriptions(ticket.photoDescriptions || []);
+<<<<<<< HEAD
     setTicketTechnicalReport(ticket.technicalReport || '');
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
     setTicketFlowStep('problem'); 
     setIsTicketModalOpen(true);
     setIsSubmitting(false);
@@ -215,12 +221,15 @@ const HomePage: React.FC<HomePageProps> = ({
     setIsSubmitting(true);
     
     try {
+<<<<<<< HEAD
       if (editingTicket && user.role === UserRole.TECHNICIAN && editingTicket.status !== 'Aberto' && editingTicket.technicianId !== user.username) {
         alert("Você não tem permissão para editar este chamado.");
         setIsSubmitting(false);
         return;
       }
 
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
       let targetUnitId = selectedUnitId;
 
       if (ticketFlowStep === 'new-unit' || (ticketFlowStep === 'problem' && !selectedUnitId && !editingTicket)) {
@@ -253,8 +262,12 @@ const HomePage: React.FC<HomePageProps> = ({
           status: ticketStatus,
           date: ticketDate,
           photos: ticketPhotos,
+<<<<<<< HEAD
           photoDescriptions: ticketPhotoDescriptions,
           technicalReport: ticketTechnicalReport
+=======
+          photoDescriptions: ticketPhotoDescriptions
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
         });
         setIsTicketModalOpen(false);
       } else {
@@ -268,8 +281,12 @@ const HomePage: React.FC<HomePageProps> = ({
           priority: ticketPriority,
           openedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           photos: ticketPhotos,
+<<<<<<< HEAD
           photoDescriptions: ticketPhotoDescriptions,
           technicalReport: ticketTechnicalReport
+=======
+          photoDescriptions: ticketPhotoDescriptions
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
         };
         await onAddTicket(newTicket);
         setLastCreatedTicket(newTicket);
@@ -880,12 +897,18 @@ const HomePage: React.FC<HomePageProps> = ({
                       </p>
                     )}
 
+<<<<<<< HEAD
                     {/* Service Report Display (Visible when ticket is Completed or has a technical report) */}
                     {(ticket.status === 'Concluído' || ticket.technicalReport) && (
+=======
+                    {/* Service Report Display (Visible when ticket is Completed) */}
+                    {ticket.status === 'Concluído' && ticket.solution && (
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                       <div className="mt-4 p-4 bg-white/60 rounded-2xl border border-gray-200">
                         <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-2 flex items-center gap-1">
                           <CheckCircle2 className="w-3 h-3" /> Relatório de Serviço
                         </p>
+<<<<<<< HEAD
                         {ticket.technicalReport && (
                           <div className="mb-2">
                             <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Parecer Técnico</p>
@@ -900,6 +923,11 @@ const HomePage: React.FC<HomePageProps> = ({
                         )}
                         {ticket.photos && ticket.photos.length > 0 && (
                           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar mt-3">
+=======
+                        <p className="text-xs font-medium text-gray-800 mb-3">{ticket.solution}</p>
+                        {ticket.photos && ticket.photos.length > 0 && (
+                          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                             {ticket.photos.map((photo, idx) => (
                               <img key={idx} src={photo} alt="Serviço" className="w-16 h-16 rounded-xl object-cover border border-gray-100" />
                             ))}
@@ -1125,6 +1153,7 @@ const HomePage: React.FC<HomePageProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1">
+<<<<<<< HEAD
                   {(user.role === UserRole.ADMIN || (user.role === UserRole.CLIENT && ticket.status === 'Aberto') || (user.role === UserRole.TECHNICIAN && (ticket.status === 'Aberto' || ticket.technicianId === user.username))) && (
                     <button 
                       onClick={() => handleEditTicketModal(ticket)}
@@ -1133,6 +1162,14 @@ const HomePage: React.FC<HomePageProps> = ({
                       <ChevronRight className="w-5 h-5" />
                     </button>
                   )}
+=======
+                  <button 
+                    onClick={() => handleEditTicketModal(ticket)}
+                    className="p-2 text-gray-400 hover:text-[var(--theme-primary)] transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                 </div>
               </div>
             )
@@ -1144,7 +1181,76 @@ const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
+<<<<<<< HEAD
       {/* Units Section removed as per user request */}
+=======
+      {/* Units Section */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-3">
+             <Thermometer className="w-6 h-6 text-[var(--theme-primary)]" />
+             <h2 className="text-xl font-black tracking-tighter italic text-[var(--theme-text)]">Meus Equipamentos</h2>
+          </div>
+          <button 
+            onClick={onOpenAllQR}
+            className="p-3 bg-white text-[var(--theme-primary)] border border-[var(--theme-primary-light)] rounded-2xl shadow-sm active:scale-95 transition-all flex items-center gap-2"
+          >
+            <Printer className="w-5 h-5" /> <span className="text-xs font-black uppercase tracking-widest">Imprimir Todos</span>
+          </button>
+        </div>
+
+        <div className="grid gap-4">
+          {filteredUnits.length > 0 ? filteredUnits.map(unit => (
+            <div 
+              key={unit.id} 
+              className={`p-6 rounded-[2.5rem] border transition-all flex flex-col md:flex-row items-center gap-6 ${getUnitStatusStyles(unit.status)}`}
+            >
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center flex-shrink-0 ${
+                unit.status === UnitStatus.OPERATIONAL ? 'bg-green-100' : 
+                unit.status === UnitStatus.STOPPED ? 'bg-red-100' : 'bg-orange-100'
+              }`}>
+                <Thermometer className={`w-10 h-10 ${
+                  unit.status === UnitStatus.OPERATIONAL ? 'text-green-600' : 
+                  unit.status === UnitStatus.STOPPED ? 'text-red-600' : 'text-orange-600'
+                }`} />
+              </div>
+              
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 mb-1">
+                  <h3 className="text-xl font-black text-[var(--theme-text)] tracking-tighter">{unit.id}</h3>
+                  <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest inline-block mx-auto md:mx-0 ${getUnitStatusBadgeStyles(unit.status)}`}>
+                    {unit.status}
+                  </span>
+                </div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{unit.brand} • {unit.btu} BTU</p>
+                <p className="text-[10px] text-gray-500 mt-1 flex items-center justify-center md:justify-start gap-1">
+                   <MapPin className="w-3 h-3" /> {unit.location}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button 
+                  onClick={() => navigate(`/unit/${unit.id}`)}
+                  className="flex-1 md:flex-none px-6 py-4 bg-gray-50 text-gray-900 font-black rounded-2xl text-xs uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                >
+                  Ficha <ChevronRight className="w-4 h-4" />
+                </button>
+                <button 
+                  onClick={() => onOpenQR(unit)}
+                  className="p-4 bg-[var(--theme-primary-light)] text-[var(--theme-primary)] rounded-2xl hover:bg-[var(--theme-primary)] hover:text-white transition-all shadow-sm"
+                >
+                  <QrCode className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )) : (
+            <div className="text-center py-20">
+               <p className="text-gray-300 font-black uppercase text-xs tracking-[0.3em]">Nenhum equipamento encontrado</p>
+            </div>
+          )}
+        </div>
+      </section>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 
       {/* Ticket Wizard Modal */}
       {isTicketModalOpen && (
@@ -1211,6 +1317,7 @@ const HomePage: React.FC<HomePageProps> = ({
 
             {ticketFlowStep === 'problem' && (
               <form onSubmit={handleSaveTicket} className="space-y-6 animate-in slide-in-from-right-4">
+<<<<<<< HEAD
                  {(user.role === UserRole.TECHNICIAN || user.role === UserRole.ADMIN) && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Relatório Técnico</label>
@@ -1222,6 +1329,8 @@ const HomePage: React.FC<HomePageProps> = ({
                       />
                     </div>
                   )}
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                  <button type="button" onClick={() => setTicketFlowStep(editingTicket ? 'problem' : (selectedUnitId ? 'selection' : 'selection'))} className="flex items-center gap-2 text-[var(--theme-primary)] font-black text-[10px] uppercase tracking-widest mb-4">
                    <ChevronLeft className="w-4 h-4" /> Voltar
                  </button>

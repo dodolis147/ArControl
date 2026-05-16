@@ -28,7 +28,11 @@ import {
   FileText,
   Camera
 } from 'lucide-react';
+<<<<<<< HEAD
 import { ACUnit, User, UserRole, MaintenanceRecord, ServiceType, UnitStatus, PlannedMaintenance } from '../types';
+=======
+import { ACUnit, User, UserRole, MaintenanceRecord, ServiceType, UnitStatus } from '../types';
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 import { getMaintenanceAdvice } from '../services/geminiService';
 import PhotoReportModal from '../components/PhotoReportModal';
 
@@ -40,15 +44,22 @@ interface UnitDetailsPageProps {
   onOpenQR: (u: ACUnit) => void;
   onAddMaintenance: (id: string, r: MaintenanceRecord) => void;
   onUpdateMaintenance: (unitId: string, recordId: string, data: Partial<MaintenanceRecord>) => void;
+<<<<<<< HEAD
   onAddPlannedMaintenance: (unitId: string, planned: any) => void;
   onUpdatePlannedMaintenance: (unitId: string, plannedId: string, data: Partial<PlannedMaintenance>) => void;
   onDeletePlannedMaintenance: (unitId: string, plannedId: string) => void;
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
   onRateMaintenance: (unitId: string, recordId: string, rating: number) => void;
   isPublic?: boolean;
 }
 
 const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({ 
+<<<<<<< HEAD
   units, user, onUpdateUnit, onDeleteUnit, onOpenQR, onAddMaintenance, onUpdateMaintenance, onAddPlannedMaintenance, onUpdatePlannedMaintenance, onDeletePlannedMaintenance, onRateMaintenance, isPublic = false 
+=======
+  units, user, onUpdateUnit, onDeleteUnit, onOpenQR, onAddMaintenance, onUpdateMaintenance, onRateMaintenance, isPublic = false 
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -64,9 +75,12 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceRecord | null>(null);
   const [reportRecord, setReportRecord] = useState<MaintenanceRecord | null>(null);
+<<<<<<< HEAD
   const [isPlannedModalOpen, setIsPlannedModalOpen] = useState(false);
   const [editingPlanned, setEditingPlanned] = useState<PlannedMaintenance | null>(null);
   const [isConfirmDeletePlanned, setIsConfirmDeletePlanned] = useState<PlannedMaintenance | null>(null);
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 
   useEffect(() => { 
     if (unit) setEditForm(unit); 
@@ -269,6 +283,10 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
                     <div className="flex-1 bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl text-[9px] sm:text-[10px] font-bold text-gray-400 truncate flex items-center min-h-[44px]">{publicLink}</div>
                     <button 
                       onClick={() => { navigator.clipboard.writeText(publicLink); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+<<<<<<< HEAD
+=======
+                      // Alterado bg-white text-blue-600 border-blue-100 para text-purple-700 border-purple-100
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                       className={`px-4 sm:px-6 py-3 rounded-xl font-black text-[10px] flex items-center justify-center gap-2 transition-all flex-shrink-0 ${copied ? 'bg-green-600 text-white' : 'bg-white text-purple-700 border border-purple-100'}`}
                     >
                       {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -277,6 +295,13 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
                   </div>
                 </>
               )}
+<<<<<<< HEAD
+=======
+              
+              <button onClick={handleOpenWhatsApp} className="w-full bg-orange-600 text-white py-4 sm:py-5 rounded-2xl sm:rounded-[1.8rem] font-black flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all text-base sm:text-lg">
+                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" /> Abrir Chamado Técnico
+              </button>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
             </div>
           </>
         )}
@@ -345,6 +370,7 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
             </div>
             <p className="text-gray-600 text-xs sm:text-sm leading-relaxed mt-4 whitespace-pre-line">{r.description}</p>
             
+<<<<<<< HEAD
             {r.technicalReport && (
               <div className="mt-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Relatório Técnico</p>
@@ -352,6 +378,8 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
               </div>
             )}
             
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
             {/* Photos Display */}
             {r.photos && r.photos.length > 0 && (
                <div className="mt-6 space-y-4">
@@ -398,6 +426,7 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
           </div>
         ))}
 
+<<<<<<< HEAD
         {activeTab === 'planned' && (
           <div className="space-y-4">
             {!isPublic && user?.role === UserRole.ADMIN && (
@@ -441,6 +470,18 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
             ))}
           </div>
         )}
+=======
+        {activeTab === 'planned' && unit.planned.map(p => (
+          <div key={p.id} className="bg-white p-6 rounded-[2rem] border border-gray-50 shadow-sm flex items-center gap-5">
+            <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl"><Calendar className="w-6 h-6" /></div>
+            <div>
+              <h4 className="font-black text-gray-900 text-lg leading-tight">{p.type}</h4>
+              <p className="text-[11px] text-orange-600 font-black uppercase tracking-widest mb-1">{p.expectedDate}</p>
+              <p className="text-xs text-gray-500 font-medium">{p.description}</p>
+            </div>
+          </div>
+        ))}
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 
         {activeTab === 'ai' && (
           // Alterado bg-blue-900 para bg-purple-900
@@ -480,6 +521,7 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
         </div>
       )}
 
+<<<<<<< HEAD
       {isConfirmDeletePlanned && (
         <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-white w-full max-sm rounded-[3rem] p-10 text-center shadow-2xl animate-in zoom-in-95">
@@ -517,6 +559,8 @@ const UnitDetailsPage: React.FC<UnitDetailsPageProps> = ({
         />
       )}
 
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
       {isMaintenanceModalOpen && (
         <MaintenanceModal 
           unit={unit} 
@@ -562,8 +606,12 @@ const MaintenanceModal = ({ unit, initialData, onClose, onSave }: { unit: ACUnit
     date: initialData?.date || new Date().toISOString().split('T')[0],
     time: initialData?.time || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     photos: initialData?.photos || [] as string[],
+<<<<<<< HEAD
     photoDescriptions: initialData?.photoDescriptions || [] as string[],
     technicalReport: initialData?.technicalReport || ''
+=======
+    photoDescriptions: initialData?.photoDescriptions || [] as string[]
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
   });
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -625,10 +673,13 @@ const MaintenanceModal = ({ unit, initialData, onClose, onSave }: { unit: ACUnit
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Descrição <span className="text-red-500">*</span></label>
             <textarea className="w-full px-5 py-3.5 bg-gray-50 rounded-xl font-medium border-2 border-transparent focus:border-purple-500 outline-none h-24 resize-none" value={form.description} onChange={e => setForm({...form, description: e.target.value})} required placeholder="Detalhamento do serviço realizado..." />
           </div>
+<<<<<<< HEAD
           <div className="space-y-1">
             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Relatório Técnico</label>
             <textarea className="w-full px-5 py-3.5 bg-gray-50 rounded-xl font-medium border-2 border-transparent focus:border-purple-500 outline-none h-32 resize-none" value={form.technicalReport} onChange={e => setForm({...form, technicalReport: e.target.value})} placeholder="Parecer técnico detalhado, peças trocadas, observações..." />
           </div>
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
           <div className="space-y-3">
              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Anexar Fotos</label>
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -671,6 +722,7 @@ const MaintenanceModal = ({ unit, initialData, onClose, onSave }: { unit: ACUnit
   );
 };
 
+<<<<<<< HEAD
 const PlannedMaintenanceModal = ({ initialData, onClose, onSave }: { initialData: PlannedMaintenance | null, onClose: () => void, onSave: (p: Partial<PlannedMaintenance>) => void }) => {
   const [form, setForm] = useState({
     type: initialData?.type || ServiceType.PREVENTIVE,
@@ -707,4 +759,6 @@ const PlannedMaintenanceModal = ({ initialData, onClose, onSave }: { initialData
   );
 };
 
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 export default UnitDetailsPage;

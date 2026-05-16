@@ -10,7 +10,11 @@ import {
   Scan,
   Settings
 } from 'lucide-react';
+<<<<<<< HEAD
 import { ACUnit, User, UserRole, UserStatus, MaintenanceRecord, Ticket, ServiceType, UnitStatus, PlannedMaintenance } from './types';
+=======
+import { ACUnit, User, UserRole, UserStatus, MaintenanceRecord, Ticket, ServiceType, UnitStatus } from './types';
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
 import { supabase } from './services/supabase';
 import { ThemeProvider } from './contexts/ThemeContext';
 
@@ -456,6 +460,7 @@ const App: React.FC = () => {
     }
   };
 
+<<<<<<< HEAD
   const handleUpdatePlannedMaintenance = async (unitId: string, plannedId: string, data: Partial<PlannedMaintenance>) => {
     try {
       const dbUpdate: any = {};
@@ -489,6 +494,8 @@ const App: React.FC = () => {
     }
   };
 
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
   const handleRateMaintenance = async (unitId: string, recordId: string, rating: number) => {
     try {
       const { error } = await supabase.from('maintenance_records').update({ rating }).eq('id', recordId);
@@ -566,7 +573,11 @@ const App: React.FC = () => {
 
   // Componente de loading interno para usar dentro do ThemeProvider
   const LoadingScreen = () => (
+<<<<<<< HEAD
     <div className="min-h-screen flex items-center justify-center bg-[var(--theme-bg)] transition-colors duration-500">
+=======
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--theme-primary)]"></div>
     </div>
   );
@@ -584,7 +595,11 @@ const App: React.FC = () => {
     <ThemeProvider>
         {isLoading && !isPublicView && authUser ? <LoadingScreen /> : (
             <Router>
+<<<<<<< HEAD
             <div className="min-h-screen bg-[var(--theme-bg)] flex flex-col pb-24 lg:pb-0 lg:pl-20 transition-colors duration-500">
+=======
+            <div className="min-h-screen bg-gray-50 flex flex-col pb-24 lg:pb-0 lg:pl-20">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                 
                 {!isPublicView && authUser && (
                 <nav className="bg-white/80 backdrop-blur-md px-6 py-4 sticky top-0 z-50 border-b border-gray-100 flex justify-between items-center lg:hidden no-print">
@@ -637,9 +652,15 @@ const App: React.FC = () => {
 
                 <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-8 relative">
                 <Routes>
+<<<<<<< HEAD
                     <Route path="/public/unit/:id" element={<UnitDetailsPage units={units} user={null} isPublic={true} onUpdateUnit={() => {}} onDeleteUnit={() => {}} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={() => {}} onUpdateMaintenance={() => {}} onAddPlannedMaintenance={() => {}} onUpdatePlannedMaintenance={() => {}} onDeletePlannedMaintenance={() => {}} onRateMaintenance={handleRateMaintenance} />} />
                     <Route path="/" element={<HomePage units={units} user={authUser!} tickets={activeTickets} users={users} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onOpenAllQR={() => setQrModalState({ isOpen: true, unit: null, all: true })} onAddTicket={handleAddTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} onAddUnit={handleAddUnit} onUpdateUnit={handleUpdateUnit} onAddPlannedMaintenance={handleAddPlannedMaintenance} />} />
                     <Route path="/unit/:id" element={<UnitDetailsPage units={units} user={authUser} onUpdateUnit={handleUpdateUnit} onDeleteUnit={handleDeleteUnit} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={handleAddMaintenance} onUpdateMaintenance={handleUpdateMaintenance} onAddPlannedMaintenance={handleAddPlannedMaintenance} onUpdatePlannedMaintenance={handleUpdatePlannedMaintenance} onDeletePlannedMaintenance={handleDeletePlannedMaintenance} onRateMaintenance={handleRateMaintenance} />} />
+=======
+                    <Route path="/public/unit/:id" element={<UnitDetailsPage units={units} user={null} isPublic={true} onUpdateUnit={() => {}} onDeleteUnit={() => {}} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={() => {}} onUpdateMaintenance={() => {}} onRateMaintenance={handleRateMaintenance} />} />
+                    <Route path="/" element={<HomePage units={units} user={authUser!} tickets={activeTickets} users={users} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onOpenAllQR={() => setQrModalState({ isOpen: true, unit: null, all: true })} onAddTicket={handleAddTicket} onUpdateTicket={handleUpdateTicket} onDeleteTicket={handleDeleteTicket} onAddUnit={handleAddUnit} onUpdateUnit={handleUpdateUnit} onAddPlannedMaintenance={handleAddPlannedMaintenance} />} />
+                    <Route path="/unit/:id" element={<UnitDetailsPage units={units} user={authUser} onUpdateUnit={handleUpdateUnit} onDeleteUnit={handleDeleteUnit} onOpenQR={(u) => setQrModalState({ isOpen: true, unit: u, all: false })} onAddMaintenance={handleAddMaintenance} onUpdateMaintenance={handleUpdateMaintenance} onRateMaintenance={handleRateMaintenance} />} />
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
                     <Route path="/reports" element={<ReportsPage units={units} user={authUser!} />} />
                     <Route path="/users" element={authUser?.role === UserRole.ADMIN ? <UsersManagementPage users={users} currentUser={authUser} onAdd={handleAddUser} onDelete={handleDeleteUser} onUpdate={handleUpdateUser} /> : <Navigate to="/" />} />
                     <Route path="/register" element={authUser?.role === UserRole.ADMIN ? <RegisterPage onAdd={handleAddUnit} /> : <Navigate to="/" />} />
