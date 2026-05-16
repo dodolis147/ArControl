@@ -1,0 +1,7 @@
+{
+  "name": "ATUALIZAÇÂO ArControl - V02- 16/05/2026",
+  "description": "A comprehensive air conditioning maintenance management system featuring QR code scanning, service history tracking, AI-powered diagnostic insights, and automated technician service requests.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
