@@ -27,7 +27,14 @@ const SettingsPage: React.FC = () => {
         primaryLight: '#faf5ff', 
         secondary: '#581c87', 
         text: '#111827',
+<<<<<<< HEAD
         background: '#f9fafb',
+=======
+<<<<<<< HEAD
+        background: '#f9fafb',
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
     });
     setSaved(false);
   };
@@ -54,6 +61,10 @@ const SettingsPage: React.FC = () => {
               <Layout className="w-5 h-5 text-gray-400" /> Cores do Sistema
             </h2>
             
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Fundo do App</label>
@@ -74,64 +85,163 @@ const SettingsPage: React.FC = () => {
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Destaque (Marca)</label>
                 <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+<<<<<<< HEAD
+=======
+=======
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Cor Primária (Marca)</label>
+                <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-200">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   <input 
                     type="color" 
                     value={localTheme.primary}
                     onChange={(e) => handleColorChange('primary', e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                     className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0"
                   />
                   <div className="flex-1 truncate">
                     <p className="font-bold text-gray-700 text-xs">{localTheme.primary}</p>
                     <p className="text-[9px] text-gray-400 uppercase">Botões</p>
+<<<<<<< HEAD
+=======
+=======
+                    className="w-12 h-12 rounded-xl cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-700">{localTheme.primary}</p>
+                    <p className="text-[10px] text-gray-400">Botões, Ícones, Destaques</p>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Fundo Intenso</label>
                 <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+=======
+<<<<<<< HEAD
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Fundo Intenso</label>
+                <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+=======
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Cor Secundária (Fundo Intenso)</label>
+                <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-200">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   <input 
                     type="color" 
                     value={localTheme.secondary}
                     onChange={(e) => handleColorChange('secondary', e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                     className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0"
                   />
                   <div className="flex-1 truncate">
                     <p className="font-bold text-gray-700 text-xs">{localTheme.secondary}</p>
                     <p className="text-[9px] text-gray-400 uppercase">Login</p>
+<<<<<<< HEAD
+=======
+=======
+                    className="w-12 h-12 rounded-xl cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-700">{localTheme.secondary}</p>
+                    <p className="text-[10px] text-gray-400">Login, Cards de Destaque</p>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
+<<<<<<< HEAD
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Tom Suave</label>
                 <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+=======
+<<<<<<< HEAD
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Tom Suave</label>
+                <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+=======
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Tom Claro (Fundos Suaves)</label>
+                <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-200">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   <input 
                     type="color" 
                     value={localTheme.primaryLight}
                     onChange={(e) => handleColorChange('primaryLight', e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                     className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0"
                   />
                   <div className="flex-1 truncate">
                     <p className="font-bold text-gray-700 text-xs">{localTheme.primaryLight}</p>
                     <p className="text-[9px] text-gray-400 uppercase">Cards</p>
+<<<<<<< HEAD
+=======
+=======
+                    className="w-12 h-12 rounded-xl cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-700">{localTheme.primaryLight}</p>
+                    <p className="text-[10px] text-gray-400">Fundo de ícones, áreas secundárias</p>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   </div>
                 </div>
               </div>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
               <div className="space-y-2 md:col-span-2">
                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                    <Type className="w-3 h-3" /> Cor do Texto
                 </label>
                 <div className="flex items-center gap-3 bg-gray-50 p-2 rounded-2xl border border-gray-200">
+<<<<<<< HEAD
+=======
+=======
+              <div className="space-y-2">
+                <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                   <Type className="w-3 h-3" /> Cor do Texto (Principal)
+                </label>
+                <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-200">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   <input 
                     type="color" 
                     value={localTheme.text}
                     onChange={(e) => handleColorChange('text', e.target.value)}
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                     className="w-10 h-10 rounded-xl cursor-pointer border-0 bg-transparent p-0"
                   />
                   <div className="flex-1">
                     <p className="font-bold text-gray-700 text-xs">{localTheme.text}</p>
+<<<<<<< HEAD
+=======
+=======
+                    className="w-12 h-12 rounded-xl cursor-pointer border-0 bg-transparent p-0"
+                  />
+                  <div className="flex-1">
+                    <p className="font-bold text-gray-700">{localTheme.text}</p>
+                    <p className="text-[10px] text-gray-400">Títulos, Corpo do Texto</p>
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
                   </div>
                 </div>
               </div>
@@ -166,10 +276,20 @@ const SettingsPage: React.FC = () => {
               <Smartphone className="w-5 h-5 text-gray-400" /> Pré-visualização
            </h2>
            
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
            <div 
             style={{ backgroundColor: localTheme.background }}
             className="border-[8px] border-gray-900 rounded-[3rem] overflow-hidden shadow-2xl relative h-[600px] pointer-events-none select-none transition-colors duration-500"
            >
+<<<<<<< HEAD
+=======
+=======
+           <div className="border-[8px] border-gray-900 rounded-[3rem] overflow-hidden bg-gray-50 shadow-2xl relative h-[600px] pointer-events-none select-none">
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
               {/* Fake Mobile Header */}
               <div className="bg-white/80 backdrop-blur-md p-6 border-b border-gray-100 flex justify-between items-center">
                  <div className="flex items-center gap-2">

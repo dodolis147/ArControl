@@ -37,9 +37,19 @@ const PhotoReportModal: React.FC<PhotoReportModalProps> = ({ data, unit, onClose
     pdf.save(`Relatorio_Fotografico_${data.id}.pdf`);
   };
 
+<<<<<<< HEAD
   const solutionText = isTicket(data) 
     ? (data.solution || data.description) 
     : (data.technicalReport || data.description);
+=======
+<<<<<<< HEAD
+  const solutionText = isTicket(data) 
+    ? (data.solution || data.description) 
+    : (data.technicalReport || data.description);
+=======
+  const solutionText = isTicket(data) ? (data.solution || data.description) : data.description;
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
   const technicianName = isTicket(data) ? data.technicianId : data.technician;
   const dateText = isTicket(data) 
     ? `${data.date.split('-').reverse().join('/')} ${data.finishedAt ? `às ${data.finishedAt}` : ''}`

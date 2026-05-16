@@ -6,7 +6,14 @@ interface Theme {
   primaryLight: string;
   secondary: string;
   text: string;
+<<<<<<< HEAD
   background: string;
+=======
+<<<<<<< HEAD
+  background: string;
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
 }
 
 interface ThemeContextType {
@@ -20,7 +27,14 @@ const defaultTheme: Theme = {
   primaryLight: '#faf5ff', // purple-50
   secondary: '#581c87', // purple-900 (used in login bg)
   text: '#111827', // gray-900
+<<<<<<< HEAD
   background: '#f9fafb', // gray-50
+=======
+<<<<<<< HEAD
+  background: '#f9fafb', // gray-50
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -28,9 +42,19 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('arcontrol_theme');
+<<<<<<< HEAD
     const parsed = saved ? JSON.parse(saved) : defaultTheme;
     // Ensure background exists for legacy saves
     return { ...defaultTheme, ...parsed };
+=======
+<<<<<<< HEAD
+    const parsed = saved ? JSON.parse(saved) : defaultTheme;
+    // Ensure background exists for legacy saves
+    return { ...defaultTheme, ...parsed };
+=======
+    return saved ? JSON.parse(saved) : defaultTheme;
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
   });
 
   useEffect(() => {
@@ -40,10 +64,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     root.style.setProperty('--theme-primary-light', theme.primaryLight);
     root.style.setProperty('--theme-secondary', theme.secondary);
     root.style.setProperty('--theme-text', theme.text);
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
     root.style.setProperty('--theme-bg', theme.background);
     
     // Apply background color to body
     document.body.style.backgroundColor = theme.background;
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> fbf9ae1ac13d00e5b94382bfbf1d947e75135034
+>>>>>>> 9482dd167b325dc8a94f412d93432b1de823787c
     
     localStorage.setItem('arcontrol_theme', JSON.stringify(theme));
   }, [theme]);
